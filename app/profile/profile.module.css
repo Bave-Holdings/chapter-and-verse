@@ -1,0 +1,90 @@
+.profile { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 24px; max-width: 1600px; margin-inline: auto; padding: 32px; color: #202428; }
+.details { min-width: 0; }
+.identity { display: grid; grid-template-columns: 82px minmax(0, 1fr) auto; align-items: center; gap: 16px; min-height: 146px; padding: 30px 32px; border-radius: 20px; background: #fff; }
+.avatar { width: 82px; height: 82px; border-radius: 50%; object-fit: cover; }
+.identityText { min-width: 0; }
+.identityText h2 { margin: 0; overflow-wrap: anywhere; font-size: 24px; line-height: 29px; font-weight: 600; letter-spacing: -.5px; }
+.identityText p { margin: 6px 0 0; color: #7c7fa1; font-size: 14px; line-height: 18px; overflow-wrap: anywhere; }
+.profile .editPhoto { padding: 10px 25px; border: 0; border-radius: 30px; background: #f7f9fa; color: #182131; white-space: nowrap; font-size: 14px; }
+.editPhoto:hover { background: #eaf6f3; }
+.hiddenInput { display: none; }
+.account, .passwordCard { padding: 32px; border: 1px solid #eee; border-radius: 20px; background: #fff; }
+.account { margin-top: 24px; }
+.account h2, .passwordCard h2 { margin: 0; color: #454545; font-size: 18px; line-height: 24px; font-weight: 600; letter-spacing: -.3px; }
+.profile label { display: block; color: #303030; }
+.account label { margin: 18px 0 10px; font-size: 14px; line-height: 20px; font-weight: 600; }
+.profile input:not([type="file"]) { width: 100%; min-width: 0; height: 58px; padding: 0 15px; border: 1px solid #eee; border-radius: 9px; background: white; color: #343c4b; font-size: 14px; outline: none; }
+.profile input::placeholder { color: #63708b; }
+.profile input:read-only { color: #999; }
+.profile input:focus-visible { border-color: #30bba6; box-shadow: 0 0 0 3px #3dd5c022; }
+.nameField { position: relative; }
+.account .nameField input { height: 52px; padding-right: 48px; }
+.nameField button { position: absolute; right: 10px; top: 9px; display: grid; width: 32px; height: 32px; place-items: center; padding: 4px; border: 0; border-radius: 5px; background: transparent; color: #38414e; }
+.nameField svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
+.emailField { margin-top: 32px; }
+.emailField label { margin-top: 0; }
+.account .emailField input { height: 50px; }
+.passwordForm { margin-top: 32px; }
+.passwordField + .passwordField { margin-top: 32px; }
+.passwordField label { margin-bottom: 10px; font-size: 12px; line-height: 16px; }
+.profile .submit { width: 100%; height: 60px; margin-top: 32px; border: 0; border-radius: 32px; background: #04121b; color: white; box-shadow: 0 7px 12px #04121b13; font-size: 16px; }
+.submit:hover { background: #123341; }
+.notice, .error { margin: 16px 0 0; font-size: 13px; line-height: 20px; }
+.notice { color: #52746c; }
+.error { color: #b42a35; }
+.passwordToggle { display: none; }
+.confirmation { width: 396px; max-width: calc(100vw - 32px); max-height: calc(100dvh - 32px); margin: auto; padding: 0; overflow-y: auto; border: 0; border-radius: 24px; background: white; color: #151b2e; }
+.confirmation::backdrop { background: #04121b1a; backdrop-filter: blur(2px); }
+.confirmationContent { padding: 32px; text-align: center; }
+.successIcon { display: grid; width: 90px; height: 90px; margin: 0 auto; place-items: center; border-radius: 50%; background: #f5faf3; color: #4eb931; }
+.successIcon svg { width: 48px; height: 48px; fill: none; stroke: currentColor; stroke-width: 3.5; stroke-linecap: round; stroke-linejoin: round; }
+.confirmation h2 { margin: 24px 0 26px; font-size: 24px; line-height: 30px; font-weight: 600; letter-spacing: -.6px; }
+.confirmation p { margin: 0; color: #627089; font-size: 13px; line-height: 18px; }
+.confirmationActions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 32px; }
+.confirmationActions a, .confirmationActions button { display: flex; align-items: center; justify-content: center; height: 60px; border: 0; border-radius: 32px; background: #f7f9fa; color: #172031; font-size: 16px; }
+.confirmationActions button { background: #04121b; color: #fff; box-shadow: 0 5px 10px #04121b13; }
+.sheetHandle { display: none; }
+@media (min-width: 768px) and (max-width: 1200px) {
+  .profile { gap: 20px; padding: 24px; }
+  .identity, .account, .passwordCard { padding: 24px; }
+  .identity { grid-template-columns: 64px minmax(0, 1fr); gap: 12px; }
+  .avatar { width: 64px; height: 64px; }
+  .identityText h2 { font-size: 20px; }
+  .editPhoto { grid-column: 2; justify-self: start; }
+}
+@media (min-width: 768px) and (max-width: 950px) {
+  .profile { grid-template-columns: 1fr; max-width: 680px; }
+}
+@media (max-width: 767px) {
+  .profile { display: flex; flex-direction: column; gap: 16px; padding: 24px 20px 64px; }
+  .details, .passwordCard { width: 100%; }
+  .identity { grid-template-columns: 66px minmax(0, 1fr); gap: 16px; padding: 16px; min-height: 134px; border-radius: 20px; }
+  .avatar { grid-row: 1 / 3; align-self: start; width: 66px; height: 66px; }
+  .identityText h2 { font-size: 20px; line-height: 26px; }
+  .identityText p { margin-top: 6px; }
+  .profile .editPhoto { grid-column: 2; justify-self: start; padding: 10px 25px; }
+  .account { margin-top: 16px; padding: 16px; }
+  .account h2 { font-size: 18px; }
+  .account label { margin-top: 18px; }
+  .emailField { margin-top: 32px; }
+  .passwordCard { padding: 16px; }
+  .desktopPasswordHeading { display: none; }
+  .profile .passwordToggle { display: flex; align-items: center; justify-content: space-between; width: 100%; padding: 0; border: 0; background: transparent; color: #454545; font-size: 18px; line-height: 24px; font-weight: 600; text-align: left; }
+  .passwordToggle svg { width: 22px; height: 22px; fill: none; stroke: #111; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+  .passwordToggle .collapsed { transform: rotate(-90deg); }
+  .passwordForm { margin-top: 32px; }
+  .passwordCollapsed { display: none; }
+  .passwordField + .passwordField { margin-top: 32px; }
+  .confirmation { position: fixed; inset: auto 0 0; width: 100%; max-width: 100%; max-height: 90dvh; margin: 0; border-radius: 24px 24px 0 0; }
+  .confirmationContent { padding: 16px 20px max(28px, env(safe-area-inset-bottom)); }
+  .sheetHandle { display: block; width: 32px; height: 4px; margin: 0 auto 26px; border-radius: 4px; background: #c4c9cd; }
+  .successIcon { width: 90px; height: 90px; }
+  .confirmation h2 { margin-top: 24px; }
+  .confirmationActions { margin-top: 32px; }
+}
+@media (max-width: 359px) {
+  .profile { padding-inline: 14px; }
+  .identity { column-gap: 12px; }
+  .identityText h2 { font-size: 18px; }
+  .identityText p { font-size: 12px; }
+}
