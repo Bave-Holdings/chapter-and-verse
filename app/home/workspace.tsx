@@ -77,6 +77,22 @@ function displayName(agent: Agent | null) {
   return AGENT_DISPLAY_NAMES[agent.key] ?? agent.name;
 }
 
+function displayUserName(user: User | null) {
+  const fullName = user?.full_name?.trim();
+  if (fullName) return fullName;
+  const emailName = user?.email.split("@")[0].replace(/[._-]+/g, " ").trim();
+  if (!emailName) return "there";
+  return emailName.replace(/\b\w/g, (letter) => letter.toUpperCase());
+}
+
+function userInitials(user: User | null) {
+  const nameParts = displayUserName(user).split(/\s+/).filter(Boolean);
+  const initials = nameParts.length > 1
+    ? `${nameParts[0][0]}${nameParts[nameParts.length - 1][0]}`
+    : nameParts[0]?.slice(0, 2);
+  return initials?.toUpperCase() || "U";
+}
+
 function dashboardQuestions(agents: Agent[], limit = 6) {
   const available = agents.filter((agent) => agent.live && agent.has_documents && agent.chips.length > 0);
   const cards: Array<{ agent: Agent; question: string }> = [];
@@ -133,7 +149,7 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [categoryDrawerOpen, setCategoryDrawerOpen] = useState(categoryMode);
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [popover, setPopover] = useState<"notifications" | "profile" | null>(null);
+  const [popover, setPopover] = useState<"notifications" | null>(null);
   const [draft, setDraft] = useState("");
   const [status, setStatus] = useState("");
   const [streaming, setStreaming] = useState(false);
@@ -157,6 +173,10 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
   const mortgageSelected = MORTGAGE_AGENT_KEYS.has(agentKey);
   const dashboardCards = dashboardQuestions(agents);
   const showConversation = loadingChat || streaming || messages.length > 0;
+  const hasCategoryContext = categoryMode || categoryDrawerOpen;
+  const mainCategoryName = mortgageSelected ? "Mortgage" : selectedAgentName;
+  const headerLabel = showConversation ? `${mainCategoryName} / ${selectedAgentName}` : "Knowledge Hub";
+  const headerTitle = showConversation ? selectedAgentName : `Good afternoon, ${displayUserName(user)}`;
 
   const reportError = useCallback((cause: unknown, fallback = "Something went wrong. Please try again.") => {
     if (cause instanceof ApiError && cause.status === 401) {
@@ -301,6 +321,8 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
   function newChat() {
     activeStream.current?.abort();
     activeChatLoad.current?.abort();
+    setLoadingChat(false);
+    setStreaming(false);
     setActiveChatId(null);
     setMessages([]);
     setDraft("");
@@ -556,7 +578,7 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
             </form>
           ) : (
             <div className={`${styles.chatListItem} ${activeChatId === chat.id ? styles.selectedPolicy : ""}`} key={chat.id}>
-              <button className={styles.chatTitle} aria-pressed={activeChatId === chat.id} onClick={() => void loadChat(chat.id)}><span aria-hidden="true">•</span>{chat.title}</button>
+              <button className={styles.chatTitle} title={chat.title} aria-pressed={activeChatId === chat.id} onClick={() => void loadChat(chat.id)}><span className={styles.chatTitleText}>{chat.title}</span></button>
               <button className={styles.chatAction} aria-label={`Rename ${chat.title}`} onClick={() => { setRenamingId(chat.id); setRenameDraft(chat.title); }}>✎</button>
               <button className={styles.chatAction} aria-label={`Delete ${chat.title}`} onClick={() => void deleteChat(chat)}>×</button>
             </div>
@@ -568,19 +590,19 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
 
       <header className={styles.header}>
         <div className={styles.headerLead}>
-          <div className={styles.greeting}>{profile ? <h1>My Profile</h1> : <><span>Knowledge Hub</span><h1>{user?.email}</h1></>}</div>
+          <div className={styles.greeting}>{profile ? <h1>My Profile</h1> : <><span>{headerLabel}</span><h1>{headerTitle}</h1></>}</div>
         </div>
         <div className={styles.mobileBrand}>
           <button ref={menuButton} className={styles.menuButton} aria-label="Open navigation" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(true)}><Icon name="menu" /></button>
-          {profile ? <h1>My Profile</h1> : <Link href="/home">INTELLENCE<span>.AI</span></Link>}
+          {profile ? <h1>My Profile</h1> : <Link href="/home" className={styles.mobileHeaderCopy}><small>{headerLabel}</small><strong>{headerTitle}</strong></Link>}
         </div>
         <div className={styles.headerActions} ref={headerActions}>
           <button className={styles.notificationButton} aria-label="Notifications unavailable" aria-expanded={popover === "notifications"} onClick={() => setPopover(popover === "notifications" ? null : "notifications")}><span><Icon name="bell" /></span></button>
-          <button className={styles.profileButton} aria-label="Open profile menu" aria-expanded={popover === "profile"} onClick={() => setPopover(popover === "profile" ? null : "profile")}><Image src="/workspace-avatar.webp" alt="" width={46} height={47} /></button>
+          <button className={styles.profileButton} aria-label="View profile" onClick={() => router.push("/profile")}><span className={styles.profileInitials} aria-hidden="true">{userInitials(user)}</span></button>
           <button className={styles.logoutButton} onClick={() => void logout()} aria-label="Log out"><Icon name="logout" /></button>
           {popover && <div className={styles.popover}>
-            <strong>{popover === "profile" ? user?.email : "Notifications"}</strong>
-            {popover === "profile" ? <><p>Signed in as {user?.email}</p><Link href="/profile" onClick={() => setPopover(null)}>My Profile</Link><button onClick={() => void logout()}>Log Out</button></> : <p>Notifications are unavailable until the backend provides a notifications API.</p>}
+            <strong>Notifications</strong>
+            <p>Notifications are unavailable until the backend provides a notifications API.</p>
           </div>}
         </div>
       </header>
@@ -608,7 +630,7 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
               {message.role === "user" && <span className={styles.senderDot} aria-label="You" />}
             </div>)}
           </div> : <div className={styles.welcome}>
-            {!categoryMode ? <div className={styles.dashboardWelcome}>
+            {!hasCategoryContext ? <div className={styles.dashboardWelcome}>
               <span className={styles.dashboardMark}>Chapter &amp; Verse</span>
               <h2>What do you need to check today?</h2>
               <p>Pick a category on the left, or jump straight to one of the questions people ask most.</p>
@@ -638,7 +660,7 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
               </div>
             </div>}
           </div>}
-          {(categoryMode || showConversation) && <div className={styles.composerArea}>
+          {(hasCategoryContext || showConversation) && <div className={styles.composerArea}>
             {status && <p className={styles.status} role="status">{status}</p>}
             <form className={styles.composer} onSubmit={sendMessage}>
               <input ref={composer} aria-label="Write a message" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder={selectedAgent?.placeholder || "Write here…"} autoComplete="off" maxLength={4000} disabled={streaming || !selectedAgent?.live || !selectedAgent?.has_documents} />

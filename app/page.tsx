@@ -9,7 +9,7 @@ export default function Home() {
   return (
     <main className={styles.page}>
       <section className={styles.authPanel} aria-labelledby="signup-heading">
-        <div className={styles.authContent}>
+        <div className={`${styles.authContent} ${styles.signupContent}`}>
           <Image
             className={styles.logo}
             src="/chapter-verse-logo-light.svg"

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { apiRequest } from "./client";
+import { apiRequest, authApi } from "./client";
 
 describe("apiRequest", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -27,5 +27,22 @@ describe("apiRequest", () => {
     }));
     const headers = fetchMock.mock.calls[0][1].headers as Headers;
     expect(headers.get("Content-Type")).toBe("application/json");
+  });
+
+  it("sends only full_name, email, and password when signing up", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      id: "user-1", email: "taylor@example.com", role: "user", created_at: "now",
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await authApi.signup("Taylor Smith", "taylor@example.com", "password8");
+
+    const request = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(JSON.parse(String(request.body))).toEqual({
+      full_name: "Taylor Smith",
+      email: "taylor@example.com",
+      password: "password8",
+    });
+    expect(String(request.body)).not.toContain("confirm_password");
   });
 });

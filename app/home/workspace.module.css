@@ -46,7 +46,7 @@
 .notificationButton > span { display: grid; width: 46px; height: 46px; place-items: center; border-radius: 8px; background: #fff; }
 .notificationButton small { display: grid; place-items: center; height: 21px; width: 21px; border-radius: 50%; color: white; background: #db080e; font-size: 14px; }
 .headerActions .profileButton { padding: 6px; background: white; }
-.profileButton img { border-radius: 7px; object-fit: cover; }
+.profileInitials { display: grid; width: 46px; height: 47px; place-items: center; border-radius: 7px; background: #e4f7f3; color: #096f62; font-size: 16px; font-weight: 700; letter-spacing: .04em; }
 .logoutButton { width: 56px; }
 .headerActions > button:hover, .logoutButton:hover { background: #edf8f6; }
 .popover { position: absolute; top: calc(100% + 12px); right: 0; z-index: 6; width: 275px; padding: 20px; border: 1px solid #e4e8eb; border-radius: 14px; background: white; box-shadow: 0 12px 40px #04121b18; font-size: 14px; }
@@ -190,11 +190,10 @@
 .newChatIcon { font-size: 18px; line-height: 1; }
 .policyList { display: flex; min-height: 0; flex: 1; flex-direction: column; overflow-y: auto; }
 .chatListItem { display: grid; grid-template-columns: minmax(0, 1fr) 32px 32px; align-items: stretch; border-bottom: 1px solid #f2f2f2; }
-.policyList .chatTitle { display: flex; min-width: 0; min-height: 58px; padding: 13px 8px 13px 20px; align-items: center; gap: 10px; overflow: hidden; border: 0; background: transparent; color: #414141; font-size: 13px; line-height: 18px; text-align: left; }
-.chatTitle > span { color: #c5c5c5; font-size: 18px; }
+.policyList .chatTitle { display: flex; min-width: 0; min-height: 58px; padding: 13px 8px 13px 20px; align-items: center; overflow: hidden; border: 0; background: transparent; color: #414141; font-size: 13px; line-height: 18px; text-align: left; }
+.chatTitleText { display: block; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .policyList .chatAction { min-height: 40px; padding: 0; border: 0; background: transparent; color: #84908e; font-size: 17px; }
 .chatListItem:hover, .chatListItem.selectedPolicy { background: #eefaf7; }
-.selectedPolicy .chatTitle > span { color: #18b69f; }
 .renameForm { display: grid; grid-template-columns: 1fr 48px 52px; gap: 4px; padding: 9px; border-bottom: 1px solid #eee; }
 .renameForm input { min-width: 0; height: 38px; padding: 0 8px; border: 1px solid #badbd5; border-radius: 7px; }
 .policyList .renameForm button { min-height: 38px; padding: 0 4px; justify-content: center; border: 0; border-radius: 6px; background: #eef7f5; font-size: 10px; }
@@ -251,7 +250,7 @@
   .categoryMode .headerActions > button, .categoryMode .logoutButton { height: 44px; }
   .categoryMode .notificationButton { padding: 0; }
   .categoryMode .notificationButton > span { width: 38px; height: 38px; }
-  .categoryMode .profileButton img { width: 32px; height: 32px; }
+  .categoryMode .profileInitials { width: 32px; height: 32px; }
   .categoryMode .logoutButton { width: 36px; }
 }
 @media (max-width: 767px) {
@@ -260,13 +259,14 @@
   .sidebarCollapsed > .sidebar { display: none; }
   .header { flex-shrink: 0; height: 76px; padding: 16px 20px; gap: 10px; border: 0; }
   .mobileBrand { display: flex; align-items: center; gap: 17px; }
-  .mobileBrand > a { font-family: var(--font-geist-sans), Arial, sans-serif; color: #101525; font-size: 20px; font-weight: 850; letter-spacing: -.6px; white-space: nowrap; }
-  .mobileBrand > a > span { color: #3dd5c0; }
+  .mobileHeaderCopy { display: flex; min-width: 0; flex-direction: column; color: #101525; }
+  .mobileHeaderCopy small { overflow: hidden; color: #657080; font-size: 10px; line-height: 14px; text-overflow: ellipsis; white-space: nowrap; }
+  .mobileHeaderCopy strong { overflow: hidden; margin-top: 2px; font-size: 15px; line-height: 19px; font-weight: 650; letter-spacing: -.2px; text-overflow: ellipsis; white-space: nowrap; }
   .menuButton { display: grid; place-items: center; width: 22px; height: 36px; padding: 0; border: 0; background: transparent; color: var(--muted); }
   .headerActions { gap: 8px; }
   .headerActions > button { height: 44px; border-radius: 8px; background: white; }
   .headerActions .profileButton { order: -1; padding: 3px; }
-  .profileButton img { width: 36px; height: 36px; border-radius: 5px; }
+  .profileInitials { width: 36px; height: 36px; border-radius: 5px; font-size: 14px; }
   .notificationButton { width: 42px; padding: 0; }
   .notificationButton > span { width: 38px; height: 38px; }
   .notificationButton small { display: none; }
@@ -343,7 +343,8 @@
 @media (max-width: 359px) {
   .header { padding-inline: 14px; }
   .mobileBrand { gap: 10px; }
-  .mobileBrand > a { font-size: 17px; }
+  .mobileBrand { gap: 9px; }
+  .mobileHeaderCopy strong { font-size: 13px; }
   .headerActions { gap: 5px; }
   .welcome { padding-inline: 18px; }
   .intro h2 { font-size: 22px; }

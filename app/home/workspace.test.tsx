@@ -53,7 +53,7 @@ vi.mock("../../lib/api", async (importOriginal) => {
   };
 });
 
-const user = { id: "user-1", email: "person@example.com", role: "user", created_at: "2026-01-01T00:00:00Z" };
+const user = { id: "user-1", full_name: "Syed Ahmed", email: "person@example.com", role: "user", created_at: "2026-01-01T00:00:00Z" };
 const agents: Agent[] = [
   {
     key: "mortgage_guidelines", slug: "mortgage", name: "Mortgage guidelines", live: true,
@@ -100,6 +100,17 @@ describe("KnowledgeWorkspace integration", () => {
     await waitFor(() => expect(mocks.replace).toHaveBeenCalledWith("/login"));
   });
 
+  it("navigates directly to the profile from the initials button", async () => {
+    render(<KnowledgeWorkspace />);
+
+    const profileButton = await screen.findByRole("button", { name: "View profile" });
+    expect(profileButton).toHaveTextContent("SA");
+    fireEvent.click(profileButton);
+
+    expect(mocks.push).toHaveBeenCalledWith("/profile");
+    expect(screen.queryByText(/Signed in as/i)).not.toBeInTheDocument();
+  });
+
   it("renders most-asked dashboard cards and submits them through the card's agent", async () => {
     mocks.createChat.mockResolvedValue(fhaChat);
     mocks.stream.mockImplementation(async (_question, _chatId, handlers) => {
@@ -108,6 +119,9 @@ describe("KnowledgeWorkspace integration", () => {
     render(<KnowledgeWorkspace />);
 
     expect(await screen.findByRole("heading", { name: "What do you need to check today?" })).toBeInTheDocument();
+    expect(screen.getAllByText("Knowledge Hub")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "Good afternoon, Syed Ahmed" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "View profile" })).toHaveTextContent("SA");
     expect(screen.queryByRole("textbox", { name: "Write a message" })).not.toBeInTheDocument();
     const cards = screen.getByLabelText("Most asked questions");
     expect(within(cards).getByRole("button", { name: "Ask Fannie Mae Selling Guide: What is the rule?" })).toBeInTheDocument();
@@ -117,6 +131,9 @@ describe("KnowledgeWorkspace integration", () => {
     await waitFor(() => expect(mocks.createChat).toHaveBeenCalledWith("fha_handbook"));
     expect(mocks.stream).toHaveBeenCalledWith("What is the FHA rule?", fhaChat.id, expect.any(Object), expect.any(AbortSignal));
     expect(await screen.findByRole("log")).toHaveTextContent("FHA answer");
+    expect(screen.getAllByText("Mortgage / FHA Handbook 4000.1")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "FHA Handbook 4000.1" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Good afternoon, Syed" })).not.toBeInTheDocument();
     expect(screen.getByRole("textbox", { name: "Write a message" })).toBeInTheDocument();
   });
 
@@ -143,6 +160,12 @@ describe("KnowledgeWorkspace integration", () => {
     expect(within(mortgageAgents).getByRole("button", { name: "Fannie Mae Selling Guide" })).toHaveAttribute("aria-pressed", "true");
     expect(within(mortgageAgents).getByRole("button", { name: "FHA Handbook 4000.1" })).toBeEnabled();
     expect(within(categoryDrawer).queryByRole("button", { name: "Close category drawer" })).not.toBeInTheDocument();
+    expect(screen.getByRole("group", { name: "Fannie Mae Selling Guide quick questions" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox", { name: "Write a message" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "What do you need to check today?" })).not.toBeInTheDocument();
+
+    fireEvent.click(within(categoryDrawer).getByRole("button", { name: "New chat" }));
+    expect(screen.getByRole("textbox", { name: "Write a message" })).toBeInTheDocument();
 
     await keyboard.keyboard("{Escape}");
     const persistentDrawer = screen.getByRole("complementary", { name: "Mortgage category drawer" });
@@ -166,6 +189,7 @@ describe("KnowledgeWorkspace integration", () => {
     render(<KnowledgeWorkspace categoryMode initialAgentSlug="mortgage" />);
 
     expect(await screen.findByRole("button", { name: "Chat one" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Chat one" })).toHaveAttribute("title", "Chat one");
     expect(mocks.listChats).toHaveBeenCalledWith("mortgage_guidelines", expect.any(AbortSignal));
     fireEvent.click(screen.getByRole("button", { name: "Chat one" }));
     expect(await screen.findByRole("log")).toHaveTextContent("Fannie question");
@@ -216,12 +240,16 @@ describe("KnowledgeWorkspace integration", () => {
 
     fireEvent.click(await screen.findByRole("button", { name: "Chat one" }));
     expect(await screen.findByRole("log")).toHaveTextContent("Existing question");
+    expect(screen.getAllByText("Mortgage / Fannie Mae Selling Guide")).toHaveLength(2);
+    expect(screen.getByRole("heading", { name: "Fannie Mae Selling Guide" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "New chat" }));
 
     expect(screen.getByRole("complementary", { name: "Mortgage category drawer" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Mortgage" })).toHaveAttribute("aria-expanded", "true");
     expect(screen.queryByRole("log")).not.toBeInTheDocument();
     expect(screen.getByRole("group", { name: "Fannie Mae Selling Guide quick questions" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Good afternoon, Syed Ahmed" })).toBeInTheDocument();
+    expect(screen.queryAllByText("Mortgage / Fannie Mae Selling Guide")).toHaveLength(0);
   });
 
   it("shows quick questions for an empty existing chat", async () => {
