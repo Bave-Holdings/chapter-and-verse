@@ -13,11 +13,15 @@ import {
   feedbackApi,
   streamQuestion,
   type Agent,
+  type AnswerPresentation,
+  type AnswerUiState,
   type Chat,
+  type ChatMessage,
   type CitationSource,
   type StreamEvent,
   type User,
 } from "../../lib/api";
+import { AnswerPresentationView } from "./answer-presentation";
 import { MarkdownMessage } from "./markdown-message";
 import styles from "./workspace.module.css";
 
@@ -44,6 +48,8 @@ type UiMessage = {
   error?: string;
   feedback?: "up" | "down";
   retryQuestion?: string;
+  presentation?: AnswerPresentation | null;
+  uiState?: AnswerUiState;
 };
 type ConversationScrollRequest =
   | { mode: "bottom" }
@@ -109,15 +115,7 @@ function dashboardQuestions(agents: Agent[], limit = 6) {
   return cards;
 }
 
-function messageFromApi(message: {
-  id: string;
-  role: string;
-  content: string;
-  created_at: string;
-  status: string | null;
-  sources: CitationSource[];
-  audit_id: string | null;
-}): UiMessage {
+function messageFromApi(message: ChatMessage): UiMessage {
   return {
     id: message.id,
     role: message.role === "user" ? "user" : "assistant",
@@ -126,6 +124,11 @@ function messageFromApi(message: {
     status: message.status,
     sources: message.sources ?? [],
     auditId: message.audit_id,
+    presentation: message.presentation ?? null,
+    uiState: message.ui_state ?? {
+      completed_step_ids: [],
+      checked_document_ids: [],
+    },
   };
 }
 
@@ -164,6 +167,7 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
   const activeStream = useRef<AbortController | null>(null);
   const activeChatLoad = useRef<AbortController | null>(null);
   const askInFlight = useRef(false);
+  const uiStateSaveTimers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const selectedAgent = agents.find((agent) => agent.key === agentKey) ?? null;
   const selectedAgentName = displayName(selectedAgent);
   const mortgageAgents = Array.from(MORTGAGE_AGENT_KEYS)
@@ -185,6 +189,11 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
     }
     setStatus(cause instanceof Error ? cause.message : fallback);
   }, [router]);
+
+  useEffect(() => () => {
+    uiStateSaveTimers.current.forEach((timer) => clearTimeout(timer));
+    uiStateSaveTimers.current.clear();
+  }, []);
 
   function categoryPanelPersists() {
     return !window.matchMedia?.("(max-width: 767px)").matches;
@@ -359,6 +368,18 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
     setMessages((items) => items.map((message) => message.id === id ? update(message) : message));
   }
 
+  function scheduleUiStateSave(chatId: string, messageId: string, uiState: AnswerUiState) {
+    const key = `${chatId}:${messageId}`;
+    const existing = uiStateSaveTimers.current.get(key);
+    if (existing) clearTimeout(existing);
+    const timer = setTimeout(() => {
+      uiStateSaveTimers.current.delete(key);
+      void chatsApi.updateMessageUiState(chatId, messageId, uiState)
+        .catch((cause) => reportError(cause, "Unable to save checklist progress."));
+    }, 400);
+    uiStateSaveTimers.current.set(key, timer);
+  }
+
   async function ask(question: string, answeringAgent = selectedAgent, initialChatId = activeChatId) {
     const cleanQuestion = question.trim();
     if (!cleanQuestion || askInFlight.current || !answeringAgent?.live || !answeringAgent.has_documents) return;
@@ -386,7 +407,7 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
       setMessages((items) => [
         ...items,
         { id: userMessageId, role: "user", content: cleanQuestion, createdAt: now.toISOString(), sources: [] },
-        { id: pendingId, role: "assistant", content: "", createdAt: now.toISOString(), sources: [], streaming: true, retryQuestion: cleanQuestion },
+        { id: pendingId, role: "assistant", content: "", createdAt: now.toISOString(), sources: [], streaming: true, retryQuestion: cleanQuestion, presentation: null, uiState: { completed_step_ids: [], checked_document_ids: [] } },
       ]);
 
       const controller = new AbortController();
@@ -402,11 +423,18 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
           } else if (event.event === "token") {
             receivedText += event.data.text;
             updatePending(pendingId, (message) => ({ ...message, content: message.content + event.data.text }));
+          } else if (event.event === "presentation") {
+            updatePending(pendingId, (message) => ({
+              ...message,
+              presentation: event.data.presentation,
+            }));
           } else if (event.event === "done") {
             const result = event.data;
             updatePending(pendingId, (message) => ({
               ...message,
+              id: result.message_id ?? message.id,
               content: receivedText ? message.content : (result.answer ?? message.content),
+              presentation: result.presentation ?? message.presentation ?? null,
               sources: result.sources ?? message.sources,
               auditId: result.audit_id,
               status: result.status,
@@ -613,13 +641,25 @@ export function KnowledgeWorkspace({ initialAgentSlug = "mortgage", categoryMode
             {loadingChat && <p className={styles.emptyState}>Loading conversation…</p>}
             {messages.map((message) => <div key={message.id} data-message-id={message.id} className={`${styles.messageRow} ${message.role === "user" ? styles.outgoing : styles.incoming}`}>
               {message.role === "assistant" && <span className={styles.chatAvatar}><Image src="/chapter-verse-mark.svg" alt="Chapter & Verse" width={28} height={28} /><i /></span>}
-              <div className={`${styles.messageBubble} ${message.role === "assistant" && message.streaming && !message.content ? styles.pendingBubble : ""}`}>
-                {message.role === "assistant" ? message.streaming && !message.content
-                  ? <span className={styles.thinkingIndicator} role="status" aria-label="Generating answer"><span /><span /><span /></span>
-                  : <MarkdownMessage content={message.content} sources={message.sources} />
+              <div className={`${styles.messageBubble} ${message.presentation ? styles.structuredBubble : ""} ${message.role === "assistant" && message.streaming && !message.content && !message.presentation ? styles.pendingBubble : ""}`}>
+                {message.role === "assistant" ? message.presentation
+                  ? <AnswerPresentationView
+                    presentation={message.presentation}
+                    sources={message.sources}
+                    uiState={message.uiState}
+                    onUiStateChange={(uiState) => {
+                      updatePending(message.id, (current) => ({ ...current, uiState }));
+                      if (activeChatId && !message.id.startsWith("pending-")) {
+                        scheduleUiStateSave(activeChatId, message.id, uiState);
+                      }
+                    }}
+                  />
+                  : message.streaming && !message.content
+                    ? <span className={styles.thinkingIndicator} role="status" aria-label="Generating answer"><span /><span /><span /></span>
+                    : <MarkdownMessage content={message.content} sources={message.sources} />
                   : <p>{message.content}</p>}
                 {message.error && <div className={styles.messageError}><span>{message.error}</span>{message.retryQuestion && <button onClick={() => void ask(message.retryQuestion!)} disabled={streaming}>Retry</button>}</div>}
-                {!(message.role === "assistant" && message.streaming && !message.content) && <div className={styles.messageMeta}>
+                {!(message.role === "assistant" && message.streaming && !message.content && !message.presentation) && <div className={styles.messageMeta}>
                   <time>{formatTime(message.createdAt)}</time>
                   {message.role === "assistant" && message.auditId && !message.streaming && <span className={styles.feedback} aria-label="Rate this answer">
                     <button aria-pressed={message.feedback === "up"} onClick={() => void rate(message.id, message.auditId!, "up")}>Helpful</button>

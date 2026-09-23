@@ -117,8 +117,8 @@
   0%, 60%, 100% { opacity: .45; transform: translateY(0); }
   30% { opacity: 1; transform: translateY(-2px); }
 }
-.messageBubble p { margin: 0; font-size: 12px; line-height: 16px; overflow-wrap: anywhere; }
-.messageBubble time { display: block; margin-top: 10px; text-align: right; color: #b0b3b5; font-size: 12px; }
+.messageBubble:not(.structuredBubble) p { margin: 0; font-size: 12px; line-height: 16px; overflow-wrap: anywhere; }
+.messageBubble:not(.structuredBubble) time { display: block; margin-top: 10px; text-align: right; color: #b0b3b5; font-size: 12px; }
 .outgoing { justify-content: flex-end; align-items: flex-end; }
 .outgoing .messageBubble { width: min(100%, 400px); padding: 14px 14px 16px; border: 2px solid #75818a; border-radius: 17px 17px 0 17px; background: var(--navy); color: #fff; }
 .outgoing .messageBubble p { font-size: 13px; line-height: 19px; }
@@ -355,4 +355,12 @@
 @media (prefers-reduced-motion: reduce) {
   .workspace *, .workspace *::before, .workspace *::after { transition: none; scroll-behavior: auto; }
   .thinkingIndicator > span { animation: none; }
+}
+
+.structuredBubble {
+  width: min(100%, 900px);
+  max-width: calc(100% - 36px);
+  padding: 0;
+  border: 0;
+  background: transparent;
 }

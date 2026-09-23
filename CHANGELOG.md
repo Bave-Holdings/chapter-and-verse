@@ -1,5 +1,39 @@
 # Changelog
 
+## September 22, 2026
+
+### Knowledge Navigation and Chat Experience
+
+- Reworked Mortgage into a non-answering parent category with separate Fannie Mae Selling Guide and FHA Handbook 4000.1 agents.
+- Preserved the exact `mortgage_guidelines` and `fha_handbook` backend keys, routes, chat creation payloads, and isolated chat histories.
+- Added a persistent category panel with subcategory selection above agent-specific chat history, including responsive mobile behavior.
+- Added subcategory quick-question cards that create and submit a new chat without duplicating conversations.
+- Updated new and empty chats to show quick questions and the message composer while existing chats immediately display their messages.
+- Hid the message composer on the global home screen and restored it whenever a category context is active.
+- Added automatic black-sidebar collapse when a conversation begins, plus persistent manual collapse and expand controls with an icon-only collapsed rail.
+- Replaced the generic empty-category introduction and knowledge-agent card with the selected subcategory's quick questions.
+- Updated chat history titles to a single-line ellipsis treatment and removed decorative leading dots.
+- Replaced the assistant photo with the Chapter & Verse mark, limited source cards to citations referenced in the answer, and kept streamed answers positioned at the start of the active response.
+- Replaced the thinking label with a compact animated status indicator.
+
+### Header and Account Refinements
+
+- Added a time-aware greeting using the signed-in user's full name for home and empty-chat states.
+- Added dynamic Mortgage/subcategory breadcrumbs and titles for active and previously saved conversations.
+- Replaced the header profile photo with generated name initials and made the initials control navigate directly to `/profile`.
+- Kept the category and chat-history panel visible when the main navigation sidebar is collapsed.
+
+### Sign-up Validation
+
+- Added Full Name and Confirm Password fields to sign-up while keeping sign-in limited to Email and Password.
+- Added required-field, email-format, eight-character password, and password-confirmation validation with field-level errors.
+- Disabled submission while a sign-up request is in progress and ensured only `full_name`, `email`, and `password` are sent to the API.
+
+### Validation
+
+- Expanded integration coverage for Mortgage grouping, agent isolation, quick-question chat creation, empty/new-chat states, sidebar controls, dynamic headers, profile navigation, and responsive navigation.
+- Verified the workspace tests, ESLint, and TypeScript checks after the refinements.
+
 ## September 21, 2026
 
 ### Backend Integration

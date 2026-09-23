@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import React from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { ApiError, type Agent, type Chat, type CitationSource } from "../../lib/api";
+import { ApiError, type Agent, type AnswerPresentation, type Chat, type CitationSource } from "../../lib/api";
 import { KnowledgeWorkspace } from "./workspace";
 
 const mocks = vi.hoisted(() => {
@@ -21,6 +21,7 @@ const mocks = vi.hoisted(() => {
     getChat: vi.fn(),
     renameChat: vi.fn(),
     removeChat: vi.fn(),
+    updateUiState: vi.fn(),
     feedback: vi.fn(),
     stream: vi.fn(),
   };
@@ -47,6 +48,7 @@ vi.mock("../../lib/api", async (importOriginal) => {
       get: mocks.getChat,
       rename: mocks.renameChat,
       remove: mocks.removeChat,
+      updateMessageUiState: mocks.updateUiState,
     },
     feedbackApi: { send: mocks.feedback },
     streamQuestion: mocks.stream,
@@ -91,6 +93,7 @@ describe("KnowledgeWorkspace integration", () => {
     mocks.listChats.mockResolvedValue([]);
     mocks.createChat.mockResolvedValue(chat);
     mocks.feedback.mockResolvedValue({ status: "ok", audit_id: "audit-1", feedback: "up" });
+    mocks.updateUiState.mockResolvedValue({ message_id: "message-structured", ui_state: { completed_step_ids: [], checked_document_ids: [] } });
     vi.spyOn(window, "confirm").mockReturnValue(true);
   });
 
@@ -329,6 +332,46 @@ describe("KnowledgeWorkspace integration", () => {
     expect(screen.getByRole("link", { name: /Guide\.pdf.*page 4/i })).toHaveAttribute("href", source.citation_url);
     fireEvent.click(screen.getByRole("button", { name: "Helpful" }));
     await waitFor(() => expect(mocks.feedback).toHaveBeenCalledWith("audit-1", "up"));
+  });
+
+  it("replaces thinking with a presentation before done and debounces checklist persistence", async () => {
+    const structured: AnswerPresentation = {
+      scope: { label: "Mortgage", detail: "Selling Guide", not_found: false },
+      verdict: { type: "fixable", kicker: "Verdict", text: "Check first", reason: "Three steps remain.", source_ids: [] },
+      borrower_script: null,
+      key_callout: "Use verified figures.",
+      statuses: [],
+      steps: [
+        { title: "Step one", bullets: [], stop_if: null, watch_out: null, source_ids: [] },
+        { title: "Step two", bullets: [], stop_if: null, watch_out: null, source_ids: [] },
+        { title: "Step three", bullets: [], stop_if: null, watch_out: null, source_ids: [] },
+      ],
+      plan_b: [], easiest_fix: null, donts: [],
+      documents: [{ label: "Paystubs", source_ids: [] }],
+      next_fact_needed: null, verify_line: null,
+    };
+    mocks.stream.mockImplementation(async (_question, _chatId, handlers) => {
+      handlers.onEvent({ event: "status", data: { message: "Formatting answer" } });
+      handlers.onEvent({ event: "presentation", data: { presentation: structured } });
+      handlers.onEvent({ event: "done", data: { status: "answered", message_id: "message-structured", presentation: structured, sources: [] } });
+    });
+    render(<KnowledgeWorkspace categoryMode initialAgentSlug="mortgage" />);
+    const input = await screen.findByRole("textbox", { name: "Write a message" });
+    fireEvent.change(input, { target: { value: "Structured question" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    expect(await screen.findByText("Check first")).toBeInTheDocument();
+    expect(screen.queryByRole("status", { name: "Generating answer" })).not.toBeInTheDocument();
+    const stepOne = screen.getByText("Step one").closest("li")!;
+    fireEvent.click(within(stepOne).getByRole("checkbox"));
+    fireEvent.click(within(stepOne).getByRole("checkbox"));
+    fireEvent.click(within(stepOne).getByRole("checkbox"));
+
+    await waitFor(() => expect(mocks.updateUiState).toHaveBeenCalledTimes(1));
+    expect(mocks.updateUiState).toHaveBeenCalledWith(chat.id, "message-structured", {
+      completed_step_ids: ["step-0"],
+      checked_document_ids: [],
+    });
   });
 
   it.each([

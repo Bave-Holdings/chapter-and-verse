@@ -1,4 +1,4 @@
-import type { Agent, Chat, ChatDetail, User } from "./types";
+import type { Agent, AnswerUiState, Chat, ChatDetail, User } from "./types";
 
 const API_PREFIX = "/api/v1";
 
@@ -110,6 +110,21 @@ export const chatsApi = {
     apiRequest<{ status: string; id: string }>(`/chats/${encodeURIComponent(chatId)}`, {
       method: "DELETE",
     }),
+  updateMessageUiState: (
+    chatId: string,
+    messageId: string,
+    uiState: AnswerUiState,
+  ) =>
+    apiRequest<{
+      message_id: string;
+      ui_state: AnswerUiState;
+    }>(
+      `/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/ui-state`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(uiState),
+      },
+    ),
 };
 
 export const feedbackApi = {

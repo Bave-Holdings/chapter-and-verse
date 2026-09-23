@@ -14,7 +14,7 @@ function parseFrame(frame: string): StreamEvent | null {
     if (line.startsWith("data:")) data.push(line.slice(5).trimStart());
   }
   if (!data.length) return null;
-  if (!["status", "sources", "token", "done", "error"].includes(event)) return null;
+  if (!["status", "sources", "token", "presentation", "done", "error"].includes(event)) return null;
   return { event, data: JSON.parse(data.join("\n")) } as StreamEvent;
 }
 

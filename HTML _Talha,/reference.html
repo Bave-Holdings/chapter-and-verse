@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Chapter &amp; Verse — Answer rendering reference</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="cv-answer.css">
+<style>
+  body { margin: 0; background: var(--cv-paper); }
+  .page { max-width: 940px; margin: 0 auto; padding: 40px 24px 80px; display: flex; flex-direction: column; gap: 56px; font-family: var(--cv-font); }
+  .page > h2 { margin: 0 0 -32px; font: 700 13px/1 var(--cv-font); color: var(--cv-slate); }
+</style>
+</head>
+<body>
+<!-- SVG icons used by verdicts and badges -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-clear" viewBox="0 0 24 24"><path d="M5 12l5 5 9-10" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-fixable" viewBox="0 0 24 24"><path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-2.5z" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  <symbol id="i-blocker" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M6.5 6.5l11 11" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+  <symbol id="i-notfound" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.4"/><path d="M21 21l-4.3-4.3" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"/></symbol>
+</svg>
+
+<main class="page">
+
+<h2>1 · Complex scenario (full guide)</h2>
+<article class="cv-answer" aria-label="Answer">
+
+  <p class="cv-scope">Answering from <strong>Mortgage › Conventional</strong> · Fannie Mae Selling Guide + your overlays · auto-detected</p>
+
+  <div class="cv-verdict cv-verdict--fixable">
+    <span class="cv-verdict__icon"><svg aria-hidden="true"><use href="#i-fixable"/></svg></span>
+    <div class="cv-verdict__body">
+      <span class="cv-verdict__kicker">Verdict</span>
+      <p class="cv-verdict__text">Possibly doable. Not today.</p>
+      <p class="cv-verdict__why">The borrower is strong. The house and the debt ratio are the risk.</p>
+    </div>
+    <ul class="cv-verdict__counts">
+      <li class="is-clear">3 clear</li>
+      <li class="is-fixable">2 fixable</li>
+      <li class="is-blocker">3 blockers to check</li>
+    </ul>
+  </div>
+
+  <nav class="cv-jump" aria-label="Jump to section">
+    <a href="#say">Say this</a><a href="#stand">Where you stand</a><a href="#steps">Steps</a>
+    <a href="#plan">If it's a no</a><a href="#dont">Don't</a><a href="#docs">Get these</a>
+  </nav>
+
+  <section class="cv-section" id="say">
+    <h3 class="cv-section__title">Say this to the borrower</h3>
+    <div class="cv-script">
+      <blockquote>You're a strong buyer, but I can't tell you you're good yet. There are a few things that could stop this loan, and I need to check them first. Send me the items on this list and I'll give you a real answer in 48 hours.</blockquote>
+      <div><button class="cv-btn cv-btn--primary" type="button">Copy script</button></div>
+    </div>
+    <div class="cv-callout cv-callout--key"><strong>Don't run DU yet.</strong> An approval on guessed numbers that falls apart later is worse than waiting two days.</div>
+  </section>
+
+  <section class="cv-section" id="stand">
+    <h3 class="cv-section__title">Where you stand</h3>
+    <ul class="cv-status cv-card">
+      <li><span class="cv-badge cv-badge--clear"><svg aria-hidden="true"><use href="#i-clear"/></svg>Clear</span><span class="cv-status__item">720 credit</span><span class="cv-status__why">Strong for 90% LTV with MI</span></li>
+      <li><span class="cv-badge cv-badge--clear"><svg aria-hidden="true"><use href="#i-clear"/></svg>Clear</span><span class="cv-status__item">Cash to close</span><span class="cv-status__why">$40k gift + $30k checking covers 10% down</span></li>
+      <li><span class="cv-badge cv-badge--clear"><svg aria-hidden="true"><use href="#i-clear"/></svg>Clear</span><span class="cv-status__item">Reserves</span><span class="cv-status__why">$100k brokerage covers them</span></li>
+      <li><span class="cv-badge cv-badge--fixable"><svg aria-hidden="true"><use href="#i-fixable"/></svg>Fixable</span><span class="cv-status__item">$40k gift</span><span class="cv-status__why">Already wired, no letter yet. Paperwork only.</span></li>
+      <li><span class="cv-badge cv-badge--fixable"><svg aria-hidden="true"><use href="#i-fixable"/></svg>Fixable</span><span class="cv-status__item">$15k bonus</span><span class="cv-status__why">Paid once. Don't count it; qualify on base pay.</span></li>
+      <li><span class="cv-badge cv-badge--blocker"><svg aria-hidden="true"><use href="#i-blocker"/></svg>Blocker</span><span class="cv-status__item">3 properties kept</span><span class="cv-status__why">Every payment counts. DTI is the likely deal-killer.</span></li>
+      <li><span class="cv-badge cv-badge--blocker"><svg aria-hidden="true"><use href="#i-blocker"/></svg>Blocker</span><span class="cv-status__item">Roof + electrical</span><span class="cv-status__why">Won't close with safety issues unrepaired</span></li>
+      <li><span class="cv-badge cv-badge--blocker"><svg aria-hidden="true"><use href="#i-blocker"/></svg>Blocker</span><span class="cv-status__item">Condo special assessment</span><span class="cv-status__why">Structural or safety work can make the project ineligible</span></li>
+    </ul>
+  </section>
+
+  <section class="cv-section" id="steps">
+    <h3 class="cv-section__title">What to do, in order
+      <span class="cv-progress" aria-hidden="true"><span style="width:0%"></span></span>
+      <span class="cv-progress-count" aria-live="polite">0 of 5 done</span>
+    </h3>
+    <ol class="cv-steps">
+      <li class="cv-step"><div class="cv-step__body">
+        <div class="cv-step__head"><h4 class="cv-step__title">Run the debt ratio first</h4><label class="cv-done"><input type="checkbox">Done</label></div>
+        <ul class="cv-bullets">
+          <li><span>Get payment, taxes, insurance and HOA for all three properties, plus leases on the rentals.</span></li>
+          <li><span>Ask him: <strong>is the house he lives in now becoming a rental?</strong> If yes, he needs a signed lease and proof of the deposit.</span></li>
+          <li><span>Calculate DTI on <strong>base pay only</strong>.</span></li>
+        </ul>
+        <div class="cv-callout cv-callout--stop"><span class="cv-callout__tag">Stop if</span><span>DTI is over 50% on base pay. Jump to <a href="#plan">If it's a no</a>.</span></div>
+        <div class="cv-cites"><a class="cv-cite cv-cite--source" href="#">Selling Guide B3-6-02, p. [__]</a></div>
+      </div></li>
+      <li class="cv-step"><div class="cv-step__body">
+        <div class="cv-step__head"><h4 class="cv-step__title">Check the condo before anything else on the house</h4><label class="cv-done"><input type="checkbox">Done</label></div>
+        <ul class="cv-bullets">
+          <li><span>Order the HOA questionnaire, budget and the special assessment letter.</span></li>
+          <li><span>You need three things: <strong>how much, what it's for, when it's due.</strong></span></li>
+          <li><span>Cosmetic? Add his share to his debts and move on.</span></li>
+        </ul>
+        <div class="cv-callout cv-callout--stop"><span class="cv-callout__tag">Stop if</span><span>The assessment is for structural or safety repairs.</span></div>
+        <div class="cv-cites"><a class="cv-cite cv-cite--source" href="#">Condo project review, p. [__]</a></div>
+      </div></li>
+      <li class="cv-step"><div class="cv-step__body">
+        <div class="cv-step__head"><h4 class="cv-step__title">Solve the roof and electrical</h4><label class="cv-done"><input type="checkbox">Done</label></div>
+        <ul class="cv-bullets">
+          <li><span>Expect the appraisal to come back "subject to" repairs.</span></li>
+          <li><span>Seller won't fix it, so: renegotiate price or credit, use a renovation loan (HomeStyle), or walk away.</span></li>
+        </ul>
+        <div class="cv-callout cv-callout--watch"><span class="cv-callout__tag">Watch out</span><span>He should never pay to fix a house he doesn't own yet.</span></div>
+        <div class="cv-cites"><a class="cv-cite cv-cite--source" href="#">Property condition, p. [__]</a></div>
+      </div></li>
+      <li class="cv-step"><div class="cv-step__body">
+        <div class="cv-step__head"><h4 class="cv-step__title">Paper the gift</h4><label class="cv-done"><input type="checkbox">Done</label></div>
+        <ul class="cv-bullets">
+          <li><span>Signed gift letter from the parents.</span></li>
+          <li><span>Proof the money left their account, and his statement showing it landed.</span></li>
+        </ul>
+        <div class="cv-callout cv-callout--watch"><span class="cv-callout__tag">Watch out</span><span>Tell him not to move that money again until closing.</span></div>
+        <div class="cv-cites"><a class="cv-cite cv-cite--source" href="#">Gift funds, p. [__]</a><a class="cv-cite cv-cite--overlay" href="#">Asset Policy 2.1, p. [__]</a></div>
+      </div></li>
+      <li class="cv-step cv-step--final"><div class="cv-step__body">
+        <div class="cv-step__head"><h4 class="cv-step__title">Now run DU</h4><label class="cv-done"><input type="checkbox">Done</label></div>
+        <ul class="cv-bullets">
+          <li><span>With verified numbers, DU's answer actually means something.</span></li>
+          <li><span>Structure the file around what steps 1–4 found.</span></li>
+        </ul>
+      </div></li>
+    </ol>
+  </section>
+
+  <section class="cv-section" id="plan">
+    <h3 class="cv-section__title">If it's a no: how we get to yes</h3>
+    <div class="cv-card" style="padding:24px;display:flex;flex-direction:column;gap:18px">
+      <ol class="cv-timeline">
+        <li><span class="cv-timeline__rail"></span><span class="cv-timeline__when">Now</span><h4 class="cv-timeline__what">Change the deal</h4>
+          <ul class="cv-bullets"><li><span>Bigger down payment</span></li><li><span>Sell or rent out the $700/mo loser</span></li><li><span>Pick a house with no repairs</span></li></ul></li>
+        <li><span class="cv-timeline__rail"></span><span class="cv-timeline__when">6 months</span><h4 class="cv-timeline__what">Clean up</h4>
+          <ul class="cv-bullets"><li><span>Lease on his current home</span></li><li><span>Losing rental fixed</span></li><li><span>More cash saved</span></li></ul></li>
+        <li><span class="cv-timeline__rail"></span><span class="cv-timeline__when">12 months</span><h4 class="cv-timeline__what">Bonus builds</h4>
+          <ul class="cv-bullets"><li><span>Second bonus received</span></li><li><span>May count with employer verification</span></li></ul></li>
+        <li><span class="cv-timeline__rail"></span><span class="cv-timeline__when">2 years</span><h4 class="cv-timeline__what">Clean file</h4>
+          <ul class="cv-bullets"><li><span>Two years of bonus history</span></li><li><span>Stronger rentals on tax returns</span></li></ul></li>
+      </ol>
+      <div class="cv-callout cv-callout--path" style="font-size:15px"><span class="cv-callout__tag">Easiest fix</span><span>A different house. A clean condo with no repairs removes two of the three blockers.</span></div>
+    </div>
+  </section>
+
+  <section class="cv-section" id="dont">
+    <h3 class="cv-section__title">Don't</h3>
+    <ul class="cv-donts cv-card">
+      <li>Say "you should be fine" before the DTI is done</li>
+      <li>Count the one-time bonus</li>
+      <li>Run DU on guessed numbers</li>
+      <li>Assume "the HOA will sort out" the assessment</li>
+    </ul>
+  </section>
+
+  <section class="cv-section" id="docs">
+    <h3 class="cv-section__title">Get these today</h3>
+    <div class="cv-card">
+      <ul class="cv-checklist">
+        <li><label><input type="checkbox"><span>Two years of W-2s and tax returns, 30 days of paystubs</span></label></li>
+        <li><label><input type="checkbox"><span>Mortgage statements, taxes, insurance and HOA for all three properties</span></label></li>
+        <li><label><input type="checkbox"><span>Leases for the rentals</span></label></li>
+        <li><label><input type="checkbox"><span>Two months of checking and brokerage statements</span></label></li>
+        <li><label><input type="checkbox"><span>Gift letter and the parents' wire proof</span></label></li>
+        <li><label><input type="checkbox"><span>Appraisal, HOA questionnaire and the special assessment letter</span></label></li>
+      </ul>
+      <div class="cv-actions"><button class="cv-btn cv-btn--primary" type="button">Email list to borrower</button><button class="cv-btn" type="button">Copy</button></div>
+    </div>
+  </section>
+
+  <footer class="cv-footer">
+    <p class="cv-footer__verify">Check against the current Fannie Mae Selling Guide and your investor overlays before quoting limits to the borrower.</p>
+    <div class="cv-cites">
+      <a class="cv-cite cv-cite--source" href="#">Selling Guide B3-6-02, p. [__]</a>
+      <a class="cv-cite cv-cite--source" href="#">Condo project review, p. [__]</a>
+      <a class="cv-cite cv-cite--overlay" href="#">Asset Policy 2.1, p. [__]</a>
+      <div class="cv-feedback"><button type="button">Helpful</button><button type="button">Not helpful</button><button type="button">Report issue</button></div>
+    </div>
+  </footer>
+</article>
+
+<h2>2 · Short answer: yes, with conditions</h2>
+<article class="cv-answer cv-answer--short" aria-label="Answer">
+  <p class="cv-scope">Answering from <strong>Mortgage › FHA</strong> · auto-detected</p>
+  <div class="cv-verdict cv-verdict--clear cv-verdict--compact">
+    <span class="cv-verdict__icon"><svg aria-hidden="true"><use href="#i-clear"/></svg></span>
+    <div class="cv-verdict__body"><span class="cv-verdict__kicker">Yes · with conditions</span><p class="cv-verdict__text">Yes, with 2 conditions</p></div>
+  </div>
+  <p style="margin:0">You can use it if both of these check out:</p>
+  <ol class="cv-conditions">
+    <li><span><strong>Prior experience.</strong> 2+ years in the same line of work before going on their own.</span></li>
+    <li><span><strong>Your overlay.</strong> [Condition from Credit Policy 4.2]</span></li>
+  </ol>
+  <div class="cv-callout cv-callout--next"><span class="cv-callout__tag">Next step</span><span>Ask for proof of that prior job (W-2s or a written VOE) before going further.</span></div>
+  <div class="cv-callout cv-callout--watch"><span class="cv-callout__tag">Watch out</span><span>Same line of work means same field. A restaurant manager who starts a trucking company doesn't count.</span></div>
+  <footer class="cv-footer"><div class="cv-cites"><a class="cv-cite cv-cite--source" href="#">HUD 4000.1 II.A.4.c, p. [__]</a><a class="cv-cite cv-cite--overlay" href="#">Credit Policy 4.2, p. [__]</a></div></footer>
+</article>
+
+<h2>3 · Short answer: not in your documents</h2>
+<article class="cv-answer cv-answer--short" aria-label="Answer">
+  <p class="cv-scope cv-scope--notfound">Searched <strong>Mortgage, Investment, Compliance</strong> · 21 policies</p>
+  <div class="cv-verdict cv-verdict--notfound cv-verdict--compact">
+    <span class="cv-verdict__icon"><svg aria-hidden="true"><use href="#i-notfound"/></svg></span>
+    <div class="cv-verdict__body"><span class="cv-verdict__kicker">Not found · no guessing</span><p class="cv-verdict__text">Not in your documents</p></div>
+  </div>
+  <p style="margin:0">I checked all 21 policies you can access. None of them cover staff using AI tools, so I won't guess on a compliance question.</p>
+  <div class="cv-callout cv-callout--next"><span class="cv-callout__tag">Next step</span><span>Escalate it. Until you hear back, don't put borrower information into any outside tool.</span></div>
+  <div style="display:flex;gap:10px;flex-wrap:wrap"><button class="cv-btn cv-btn--primary" type="button">Escalate to Compliance</button><button class="cv-btn" type="button">Rephrase</button></div>
+</article>
+
+</main>
+
+<script>
+/* Step checkboxes: mark done + update progress. Persist per chat in your app state. */
+document.querySelectorAll('.cv-steps').forEach(function (list) {
+  var section = list.closest('.cv-section');
+  var bar = section.querySelector('.cv-progress > span');
+  var count = section.querySelector('.cv-progress-count');
+  var boxes = list.querySelectorAll('.cv-done input');
+  function update() {
+    var done = 0;
+    boxes.forEach(function (b) { b.closest('.cv-step').classList.toggle('is-done', b.checked); if (b.checked) done++; });
+    if (bar) bar.style.width = (done / boxes.length * 100) + '%';
+    if (count) count.textContent = done + ' of ' + boxes.length + ' done';
+  }
+  boxes.forEach(function (b) { b.addEventListener('change', update); });
+});
+</script>
+</body>
+</html>
