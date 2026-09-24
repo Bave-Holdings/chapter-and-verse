@@ -2,6 +2,15 @@
 
 ## September 24, 2026
 
+### Authentication Entry and Preview
+
+- Made `/` open Login, moved account creation to `/signup`, and updated the sign-up link and page metadata.
+- Added a fresh cookie-session check to the authentication pages so signed-in visitors continue to `/home` without seeing the forms.
+- Replaced the session-check message with a subtle form skeleton, reserving the form's layout to avoid logo jumps and respecting reduced-motion preferences.
+- Rebuilt the supplied preview design as native HTML/CSS with SVG icons, matching its sidebar, toolbar, conversation, source badges, and composer across Login, Sign Up, and Forgot Password.
+- Enlarged the preview to use the available panel space while keeping its toolbar, message bubble, send control, and footer fully visible, and added subtle hover effects with reduced-motion support.
+- Added coverage for entry routing, existing and expired sessions, interrupted session checks, and the dedicated sign-up route.
+
 ### Persistent Workspace Navigation
 
 - Moved `/home`, `/home/chat`, `/category`, `/category/[slug]`, and `/profile` into a shared workspace route-group layout so the authenticated shell remains mounted during navigation.

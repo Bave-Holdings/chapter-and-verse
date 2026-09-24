@@ -83,7 +83,7 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ email, password, remember_me: rememberMe }),
     }),
-  me: () => apiRequest<User>("/auth/me"),
+  me: (signal?: AbortSignal) => apiRequest<User>("/auth/me", { cache: "no-store", signal }),
   logout: () => apiRequest<{ status: string }>("/auth/logout", { method: "POST" }),
 };
 

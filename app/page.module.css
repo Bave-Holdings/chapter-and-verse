@@ -35,6 +35,29 @@
   padding-block: 40px;
 }
 
+.sessionGate { position: relative; display: flow-root; }
+.sessionPending { visibility: hidden; pointer-events: none; }
+.sessionLoading { position: absolute; inset: 0; pointer-events: none; animation: skeletonReveal 160ms 180ms both; }
+.sessionPending .intro, .sessionPending .form, .sessionPending .loginPrompt, .sessionPending .backLink,
+.sessionLoading .intro, .sessionLoading .form, .sessionLoading .loginPrompt, .sessionLoading .backLink { animation: none; }
+.skeletonBlock { display: block; border: 0; border-radius: 6px; background: linear-gradient(100deg, #e8eded 20%, #f2f6f5 45%, #e8eded 70%); background-size: 220% 100%; box-shadow: none; animation: skeletonShimmer 1.8s ease-in-out infinite; }
+.skeletonTitle { width: 72%; height: 43px; }
+.skeletonSubtitle { width: 90%; height: 19px; margin-top: 24px; }
+.skeletonLabel { width: 86px; height: 14px; margin-bottom: 12px; }
+.skeletonInput { width: 100%; height: 58px; border-radius: 8px; }
+.sessionLoading .formOptions { min-height: 18px; }
+.skeletonOption { width: 100px; height: 12px; }
+.sessionLoading .submit { border: 0; border-radius: 999px; background: #e8eded; box-shadow: none; }
+.sessionLoading .unavailableNotice { border: 0; background: #e8eded; }
+.skeletonFooter { width: 55%; height: 16px; margin-inline: auto; }
+.sessionLoading .backLink { width: 88px; }
+.sessionLoading .backLink .skeletonFooter { width: 100%; }
+.skeletonNotice { height: 76px; }
+.signupContent .skeletonSubtitle { margin-top: 12px; }
+.signupContent .skeletonLabel { margin-bottom: 8px; }
+.signupContent .skeletonInput { height: 52px; }
+.forgotContent .skeletonSubtitle { height: 42px; }
+
 .logo {
   display: block;
   width: 232px;
@@ -218,54 +241,22 @@
 .backLink:hover svg { transform: translateX(-3px); }
 .backLink:focus-visible { outline: 3px solid rgba(61, 213, 192, 0.4); outline-offset: 4px; }
 
-.visualPanel {
-  position: relative;
-  min-width: 0;
-  min-height: 100svh;
-  overflow: hidden;
-  border-radius: 0;
-  background:
-    radial-gradient(circle at 78% 52%, rgba(32, 78, 126, 0.22), transparent 48%),
-    linear-gradient(145deg, #0b1d37 0%, #173763 100%);
-}
-
-.dotPatternTop,
-.dotPatternLeft,
-.dotPatternBottom {
-  position: absolute;
-  width: 520px;
-  height: 260px;
-  opacity: 0.3;
-  stroke: #6f9bc5;
-  stroke-width: 3;
-  stroke-dasharray: 0.1 10;
-  stroke-linecap: round;
-  pointer-events: none;
-}
-
-.dotPatternTop { top: -55px; right: -12px; transform: rotate(8deg); }
-.dotPatternLeft { bottom: -38px; left: -180px; transform: rotate(8deg); animation-delay: -3s; animation-direction: reverse; }
-.dotPatternBottom { right: -110px; bottom: -58px; transform: rotate(-12deg); animation-delay: -6s; }
-
-.productPreview {
-  position: absolute;
-  top: 11.5%;
-  bottom: 11.5%;
-  left: 12%;
-  width: 88%;
-  overflow: hidden;
-  border-radius: 24px 0 0 24px;
-  box-shadow: 0 8px 30px rgba(2, 13, 25, 0.3);
-}
-.previewImage { display: block; width: 100%; height: 100%; object-fit: cover; object-position: left top; }
-
 @keyframes contentRise {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
 }
 
-@media (max-width: 900px) {
-  .page { grid-template-columns: minmax(430px, 52%) minmax(0, 48%); }
+@keyframes skeletonReveal {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes skeletonShimmer {
+  from { background-position: 100% 0; }
+  to { background-position: -100% 0; }
+}
+
+@media (min-width: 901px) and (max-width: 1200px) {
   .authContent { width: min(400px, calc(100% - 48px)); }
 }
 
@@ -282,6 +273,8 @@
   .logo { width: 248px; max-width: 85%; }
   .intro { margin-top: 69px; }
   .intro h1 { font-size: 24px; line-height: 1.25; letter-spacing: -0.02em; }
+  .skeletonTitle { height: 30px; }
+  .skeletonSubtitle { margin-top: 14px; }
   .intro p { margin-top: 14px; font-size: 14px; line-height: 1.45; }
   .form { margin-top: 31px; }
   .field label { margin-bottom: 12px; font-size: 12px; }
@@ -293,7 +286,6 @@
   .forgotContent .intro { margin-top: 69px; }
   .forgotContent .submit { margin-top: 29px; }
   .backLink { margin-top: 31px; }
-  .visualPanel { display: none; }
 }
 
 @media (max-width: 359px) {
@@ -309,6 +301,8 @@
   .form { margin-top: 21px; }
   .field + .field { margin-top: 16px; }
   .field input { height: 52px; }
+  .skeletonInput { height: 52px; }
+  .skeletonSubtitle { margin-top: 9px; }
   .submit { height: 54px; margin-top: 21px; }
   .loginPrompt { margin-top: 20px; }
   .forgotContent .intro { margin-top: 36px; }
@@ -317,6 +311,6 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .logo, .intro, .form, .loginPrompt, .backLink { animation: none; }
+  .logo, .intro, .form, .loginPrompt, .backLink, .sessionLoading, .skeletonBlock { animation: none; }
   .field input, .submit { transition: none; }
 }

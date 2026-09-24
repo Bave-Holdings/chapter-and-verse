@@ -18,8 +18,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Sign Up | Chapter & Verse",
-  description: "Create your Chapter & Verse account.",
+  title: "Chapter & Verse",
+  description: "Your knowledge workspace, from question to source.",
   icons: {
     icon: "/chapter-verse-mark.svg",
   },

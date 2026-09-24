@@ -13,9 +13,9 @@ const chats = [
   { id: "fha-one", agent_key: "fha_handbook", title: "Saved FHA chat" },
 ].map((chat) => ({ ...chat, user_id: "user", created_at: timestamp, updated_at: timestamp }));
 
-async function mockApi(page: Page) {
+async function mockApi(page: Page, initiallyAuthenticated = true) {
   const requests: string[] = [];
-  let authenticated = true;
+  let authenticated = initiallyAuthenticated;
   await page.route("**/api/v1/**", async (route) => {
     const request = route.request();
     const url = new URL(request.url());
@@ -169,14 +169,15 @@ test("mobile links close the drawer and retain the shared sidebar", async ({ pag
 });
 
 test("auth links, form redirects, logout, and protected history use client navigation", async ({ page }) => {
-  await mockApi(page);
-  await page.goto("/login");
+  await mockApi(page, false);
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/login$/);
   const checkDocument = await trackDocument(page);
   await page.getByRole("link", { name: "Forgot password?" }).click();
   await expect(page).toHaveURL(/\/forgot-password$/);
   await page.getByRole("link", { name: "Go back", exact: true }).click();
   await page.getByRole("link", { name: "Sign up", exact: true }).click();
-  await expect(page).toHaveURL(/\/$/);
+  await expect(page).toHaveURL(/\/signup$/);
   await page.getByRole("link", { name: "Log In", exact: true }).click();
   await expect(page).toHaveURL(/\/login$/);
   await page.getByLabel("Email Address", { exact: true }).fill("test@example.test");
@@ -191,6 +192,27 @@ test("auth links, form redirects, logout, and protected history use client navig
   await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole("button", { name: "Log In", exact: true })).toBeVisible();
   await checkDocument();
+});
+
+for (const path of ["/", "/login", "/signup", "/forgot-password"]) {
+  test(`signed-in visitors go home from ${path}`, async ({ page }) => {
+    await mockApi(page);
+    await page.goto(path);
+    await expect(page).toHaveURL(/\/home$/);
+    await expect(page.getByRole("heading", { name: "What do you need to check today?" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Log In", exact: true })).toHaveCount(0);
+  });
+}
+
+test("the dedicated signup page creates an account and enters home", async ({ page }) => {
+  await mockApi(page, false);
+  await page.goto("/signup");
+  await page.getByLabel("Full Name", { exact: true }).fill("Test User");
+  await page.getByLabel("Email Address", { exact: true }).fill("test@example.test");
+  await page.getByLabel("Password", { exact: true }).fill("password123");
+  await page.getByLabel("Confirm Password", { exact: true }).fill("password123");
+  await page.getByRole("button", { name: "Sign Up", exact: true }).click();
+  await expect(page).toHaveURL(/\/home$/);
 });
 
 test("category aliases and invalid category/chat guards preserve client routing", async ({ page }) => {
