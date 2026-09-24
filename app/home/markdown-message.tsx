@@ -5,7 +5,18 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 import type { CitationSource } from "../../lib/api";
+import { MessageLink } from "../_components/message-link";
+import { citationLabel } from "./citation-label";
 import styles from "./workspace.module.css";
+
+type MarkdownMessageProps = {
+  content: string;
+  sources: CitationSource[];
+  onCitationSelect?: (
+    source: CitationSource,
+    visibleSources: CitationSource[],
+  ) => void;
+};
 
 function withCitationLinks(markdown: string) {
   return markdown.replace(/\[(\d+)\](?!\s*\()/g, "[$1](#citation-$1)");
@@ -15,7 +26,7 @@ function citedIndexes(markdown: string) {
   return new Set(Array.from(markdown.matchAll(/\[(\d+)\](?!\s*\()/g), (match) => Number(match[1])));
 }
 
-export function MarkdownMessage({ content, sources }: { content: string; sources: CitationSource[] }) {
+export function MarkdownMessage({ content, sources, onCitationSelect }: MarkdownMessageProps) {
   const [highlighted, setHighlighted] = useState<number | null>(null);
   const sourceList = useRef<HTMLDivElement>(null);
   const cited = citedIndexes(content);
@@ -24,6 +35,8 @@ export function MarkdownMessage({ content, sources }: { content: string; sources
   function citation(index: number) {
     setHighlighted(index);
     sourceList.current?.querySelector(`[data-source-index="${index}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    const source = citedSources.find((item) => item.index === index);
+    if (source) onCitationSelect?.(source, citedSources);
   }
 
   return (
@@ -39,7 +52,7 @@ export function MarkdownMessage({ content, sources }: { content: string; sources
                 const exists = citedSources.some((source) => source.index === index);
                 return <button type="button" className={styles.citationButton} disabled={!exists} onClick={() => citation(index)} aria-label={`Show source ${index}`}>{children}</button>;
               }
-              return <a href={href} target="_blank" rel="noreferrer">{children}</a>;
+              return <MessageLink href={href}>{children}</MessageLink>;
             },
           }}
         >
@@ -49,18 +62,17 @@ export function MarkdownMessage({ content, sources }: { content: string; sources
       {citedSources.length > 0 && (
         <div className={styles.sourceList} aria-label="Sources" ref={sourceList}>
           {citedSources.map((source) => (
-            <a
+            <button
+              type="button"
               data-source-index={source.index}
+              data-source-kind={source.source_kind}
               key={`${source.index}-${source.document_id}-${source.page_number}`}
               className={highlighted === source.index ? styles.highlightedSource : undefined}
-              href={source.citation_url}
-              target="_blank"
-              rel="noreferrer"
-              onClick={() => setHighlighted(source.index)}
+              aria-pressed={highlighted === source.index}
+              onClick={() => citation(source.index)}
             >
-              <strong>[{source.index}] {source.title || source.section_id || source.doc_name}</strong>
-              <span>{source.doc_name} · page {source.page_number}</span>
-            </a>
+              <strong>{citationLabel(source)}</strong>
+            </button>
           ))}
         </div>
       )}

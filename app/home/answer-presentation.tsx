@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { citationLabel } from "./citation-label";
 
 import type {
   AnswerPresentation,
@@ -14,6 +15,10 @@ type AnswerPresentationProps = {
   sources: CitationSource[];
   uiState?: AnswerUiState;
   onUiStateChange?: (state: AnswerUiState) => void;
+  onCitationSelect?: (
+    source: CitationSource,
+    visibleSources: CitationSource[],
+  ) => void;
 };
 
 const EMPTY_UI_STATE: AnswerUiState = {
@@ -55,19 +60,11 @@ function collectSourceIds(value: unknown, output: number[] = []): number[] {
 
 function fullSourceLabel(source: CitationSource) {
   const parts = [
-    source.section_id || source.sub_section_id || source.title,
+    source.sub_section_id || source.section_id || source.title,
     source.doc_name,
     source.page_number ? `p. ${source.page_number}` : null,
   ].filter((part, index, values): part is string => Boolean(part) && values.indexOf(part) === index);
   return parts.join(" · ") || "Source";
-}
-
-function compactSourceLabel(source: CitationSource) {
-  const heading = source.section_id || source.sub_section_id || source.title || source.doc_name || "Source";
-  const colonIndex = heading.indexOf(":");
-  const sectionCode = colonIndex > 0 && colonIndex <= 24 ? heading.slice(0, colonIndex) : heading;
-  const shortened = sectionCode.length > 36 ? `${sectionCode.slice(0, 35).trimEnd()}…` : sectionCode;
-  return `${shortened}${source.page_number ? ` · p. ${source.page_number}` : ""}`;
 }
 
 type CitationProps = SourceIds & {
@@ -97,7 +94,7 @@ function Citations({ source_ids, byIndex, selectedSource, onSelect, inline = fal
       aria-pressed={selectedSource === source.index}
       title={fullSourceLabel(source)}
       onClick={() => onSelect(source)}
-    ><span className="cv-cite__label">{compactSourceLabel(source)}</span></button>)}
+    ><span className="cv-cite__label">{citationLabel(source)}</span></button>)}
   </Wrapper>;
 }
 
@@ -112,6 +109,7 @@ export function AnswerPresentationView({
   sources,
   uiState = EMPTY_UI_STATE,
   onUiStateChange,
+  onCitationSelect,
 }: AnswerPresentationProps) {
   const reactId = useId();
   const anchorPrefix = `cv-${reactId.replace(/[^a-zA-Z0-9_-]/g, "")}`;
@@ -142,6 +140,10 @@ export function AnswerPresentationView({
   const complex = sectionCount >= 4 || presentation.statuses.length >= 4 || presentation.steps.length >= 3;
   const byIndex = useMemo(() => new Map(sources.map((source) => [source.index, source])), [sources]);
   const allSourceIds = useMemo(() => collectSourceIds(presentation), [presentation]);
+  const visibleSources = useMemo(() => {
+    const visibleIds = new Set(allSourceIds);
+    return sources.filter((source) => visibleIds.has(source.index));
+  }, [allSourceIds, sources]);
   const state = onUiStateChange ? uiState : localState;
   const completed = new Set(state.completed_step_ids);
   const checkedDocuments = new Set(state.checked_document_ids);
@@ -188,7 +190,7 @@ export function AnswerPresentationView({
 
   function openSource(source: CitationSource) {
     setSelectedSource(source.index);
-    if (source.citation_url) window.open(source.citation_url, "_blank", "noopener,noreferrer");
+    onCitationSelect?.(source, visibleSources);
   }
 
   const citationProps = { byIndex, selectedSource, onSelect: openSource };
@@ -198,9 +200,11 @@ export function AnswerPresentationView({
 
   return <article className={`cv-answer${complex ? "" : " cv-answer--short"}`} aria-label="Answer">
     {(presentation.scope.label || presentation.scope.detail) && <p className={`cv-scope${presentation.scope.not_found ? " cv-scope--notfound" : ""}`}>
-      {presentation.scope.label && <strong>{presentation.scope.label}</strong>}
-      {presentation.scope.label && presentation.scope.detail && <span aria-hidden="true"> · </span>}
-      {presentation.scope.detail}
+      <span>
+        {presentation.scope.label && <strong>{presentation.scope.label}</strong>}
+        {presentation.scope.label && presentation.scope.detail && <span aria-hidden="true"> · </span>}
+        {presentation.scope.detail}
+      </span>
     </p>}
 
     {(presentation.verdict.kicker || presentation.verdict.text || presentation.verdict.reason) && <div className={`cv-verdict cv-verdict--${presentation.verdict.type}${complex ? "" : " cv-verdict--compact"}`}>
@@ -261,7 +265,7 @@ export function AnswerPresentationView({
 
     {(presentation.plan_b.length > 0 || presentation.easiest_fix) && <section className="cv-section" id={`${anchorPrefix}-plan`}>
       <h3 className="cv-section__title">If it’s a no: how we get to yes</h3>
-      <div className="cv-card" style={{ padding: 24, display: "flex", flexDirection: "column", gap: 18 }}>
+      <div className="cv-card cv-plan">
         {presentation.plan_b.length > 0 && <ol className="cv-timeline">{presentation.plan_b.map((item, index) => <li key={`${item.when}-${item.title}-${index}`}>
           <span className="cv-timeline__rail" /><span className="cv-timeline__when">{item.when}</span><h4 className="cv-timeline__what">{item.title}</h4>
           <Bullets items={item.bullets} /><Citations {...citationProps} source_ids={item.source_ids} />
@@ -280,7 +284,14 @@ export function AnswerPresentationView({
       <div className="cv-card">
         <ul className="cv-checklist">{presentation.documents.map((item, index) => {
           const id = `document-${index}`;
-          return <li key={id} data-cv-document={id}><label><input type="checkbox" checked={checkedDocuments.has(id)} onChange={() => toggleDocument(id)} /><span>{item.label}<Citations {...citationProps} source_ids={item.source_ids} inline /></span></label></li>;
+          const inputId = `${anchorPrefix}-${id}`;
+          return <li key={id} data-cv-document={id}>
+            <input id={inputId} type="checkbox" checked={checkedDocuments.has(id)} onChange={() => toggleDocument(id)} />
+            <div>
+              <label htmlFor={inputId}>{item.label}</label>
+              <Citations {...citationProps} source_ids={item.source_ids} />
+            </div>
+          </li>;
         })}</ul>
         <div className="cv-actions">
           <button className="cv-btn cv-btn--primary" type="button" onClick={() => void copyText(documentText, "documents")}>{copied === "documents" ? "Copied" : "Copy list"}</button>
@@ -293,6 +304,7 @@ export function AnswerPresentationView({
 
     {(presentation.verify_line || footerHasCitations) && <footer className="cv-footer">
       {presentation.verify_line && <p className="cv-footer__verify">{presentation.verify_line}</p>}
+      {footerHasCitations && <span className="cv-footer__label">Sources</span>}
       <Citations {...citationProps} source_ids={allSourceIds} />
     </footer>}
   </article>;

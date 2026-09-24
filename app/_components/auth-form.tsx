@@ -1,6 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { useState, type FormEvent } from "react";
 
 import { ApiError, authApi } from "../../lib/api";
@@ -31,6 +32,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
     const email = String(values.get("email") ?? "").trim();
     const password = String(values.get("password") ?? "");
     const confirmPassword = String(values.get("confirm_password") ?? "");
+    const rememberMe = values.get("remember_me") === "on";
     const nextErrors: FieldErrors = {};
 
     if (mode === "signup" && !fullName) nextErrors.fullName = "Full name is required.";
@@ -48,7 +50,7 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
     setSubmitting(true);
     try {
       if (mode === "signup") await authApi.signup(fullName, email, password);
-      else await authApi.login(email, password);
+      else await authApi.login(email, password, rememberMe);
       router.replace("/home");
     } catch (cause) {
       setError(cause instanceof ApiError ? cause.message : "Unable to connect. Please try again.");
@@ -78,6 +80,13 @@ export function AuthForm({ mode }: { mode: "signup" | "login" }) {
         <label htmlFor="signup-confirm-password">Confirm Password</label>
         <input id="signup-confirm-password" name="confirm_password" type="password" autoComplete="new-password" placeholder="Confirm your password" required disabled={submitting} aria-invalid={Boolean(fieldErrors.confirmPassword)} aria-describedby={fieldErrors.confirmPassword ? "signup-confirm-password-error" : undefined} onChange={() => clearFieldError("confirmPassword")} />
         {fieldErrors.confirmPassword && <p className={styles.fieldError} id="signup-confirm-password-error">{fieldErrors.confirmPassword}</p>}
+      </div>}
+      {mode === "login" && <div className={styles.formOptions}>
+        <label className={styles.remember} htmlFor="login-remember-me">
+          <input id="login-remember-me" name="remember_me" type="checkbox" disabled={submitting} />
+          <span>Remember me</span>
+        </label>
+        <Link className={styles.forgotLink} href="/forgot-password">Forgot password?</Link>
       </div>}
       {error && <p className={styles.formError} role="alert">{error}</p>}
       <button className={styles.submit} type="submit" disabled={submitting}>{submitting ? "Please wait…" : mode === "signup" ? "Sign Up" : "Log In"}</button>

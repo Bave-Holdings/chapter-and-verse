@@ -78,10 +78,10 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ full_name: fullName, email, password }),
     }),
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, rememberMe = false) =>
     apiRequest<User>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, remember_me: rememberMe }),
     }),
   me: () => apiRequest<User>("/auth/me"),
   logout: () => apiRequest<{ status: string }>("/auth/logout", { method: "POST" }),

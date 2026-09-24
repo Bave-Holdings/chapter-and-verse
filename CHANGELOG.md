@@ -1,5 +1,77 @@
 # Changelog
 
+## September 24, 2026
+
+### Persistent Workspace Navigation
+
+- Moved `/home`, `/home/chat`, `/category`, `/category/[slug]`, and `/profile` into a shared workspace route-group layout so the authenticated shell remains mounted during navigation.
+- Replaced manual browser-history updates with Next.js links and router navigation, keeping the address bar, selected category, profile screen, and rendered route synchronized.
+- Preserved the loaded workspace, sidebar, and navigation state across category changes, account navigation, browser back/forward actions, and mobile drawer links without reloading the document or refetching shared agent data.
+- Added route guards and canonical redirects for the `/category` alias, unknown categories, invalid conversations, and protected history after logout.
+
+### Conversation Persistence and History
+
+- Added encoded `?chat=` URLs for active conversations and restored the selected conversation after a hard refresh or browser back/forward navigation.
+- Kept same-category and cross-category history selection synchronized with the active agent, and made New Question clear the conversation URL and return to the correct quick-question state.
+- Added an accessible global chat-history search with recent conversations, title filtering, loading/error/empty states, keyboard navigation, outside-click and Escape dismissal, and focus restoration.
+- Added JSON conversation export and retained the active streamed answer while replacing the URL for newly created chats.
+- Replaced native chat-deletion confirmation with an accessible, responsive confirmation dialog.
+
+### Citations, Answers, and Links
+
+- Added a responsive citation details panel with document metadata, cited passages, source tabs, keyboard tab navigation, copy-citation feedback, and Open at page actions.
+- Added support for source type, document version, and exact cited-passage metadata, including distinct firm-overlay presentation.
+- Standardized citation labels across structured and Markdown answers and limited displayed sources to those referenced by the answer.
+- Routed safe same-origin page links inside answers through the App Router while keeping external links and downloadable API documents as normal browser links.
+- Refined structured-answer spacing, document checklist controls, source footers, and citation interactions to match the rendering specification.
+
+### Authentication, Profile, and Responsive UI
+
+- Added functional Remember me handling through the login form, API client, and same-origin login proxy while preserving session-only cookies when it is not selected.
+- Moved Forgot password into the login form, refined the responsive authentication layouts, and replaced the reconstructed desktop preview with an optimized product-preview asset.
+- Updated the profile screen to show backend account data and generated initials, added explicit unavailable/error states, and added a responsive collapsible password section.
+- Refined the disabled forgot-password form so the intended workflow is visible while clearly explaining that the backend reset endpoint is unavailable.
+- Fixed narrow and short viewport overflow, header crowding, sidebar behavior, and desktop/mobile layout consistency.
+
+### Testing and Documentation
+
+- Added Playwright configuration and mocked-API browser tests for document-preserving navigation, route synchronization, chat refresh persistence, back/forward behavior, internal answer links, authentication/logout, invalid-route guards, mobile drawers, and desktop/mobile history search.
+- Expanded Vitest coverage for workspace routing, chat restoration, history search, citation labeling and panels, structured answers, Markdown links, authentication, and responsive interactions.
+- Added a dedicated local authenticated QA account for exercising protected endpoints and verified the reported navigation and refresh regressions in Chrome through Playwright.
+- Documented the shared workspace layout and browser-test workflow in the README, added `npm run test:e2e`, and ignored generated Playwright reports and test results.
+
+## September 23, 2026
+
+### Frontend Review Fixes
+
+- Reviewed the UI issues documented in `Intellence AI.md` and corrected the reported authentication, workspace, navigation, profile, and responsive-layout problems.
+- Refined the login and sign-up layouts for desktop, tablet, landscape, mobile, and short-screen viewports, including fixes for horizontal overflow and misplaced authentication content.
+- Corrected the mobile sign-up copy and moved Forgot password into the login form beside Remember me.
+- Prevented the main navigation sidebar from collapsing automatically when opening a saved conversation or submitting a question, while retaining the manual collapse control.
+- Replaced the browser-native delete prompt with an accessible confirmation dialog and responsive mobile bottom sheet.
+
+### Authentication and Session Handling
+
+- Connected Remember me to the login request and added a same-origin login proxy that preserves the backend's persistent cookie only when requested.
+- Kept unchecked logins session-only by removing cookie expiration and maximum-age attributes from the proxied response.
+- Added unit coverage for both persistent and session-only login behavior.
+- Created a dedicated local dummy user for authenticated UI and protected-endpoint testing.
+
+### Category and Conversation Routing
+
+- Removed the forced category workspace remount and changed category selection to client-side navigation so switching between Fannie Mae and FHA does not reload the document or repeat authentication requests.
+- Synchronized category state with browser navigation and kept each agent's chat history isolated.
+- Replaced the profile initials button with a proper `/profile` link, fixing the case where profile content appeared while the address bar still showed `/category/mortgage`.
+- Added the active chat ID to the category URL and restored that conversation after a hard refresh instead of starting a new chat.
+- Updated selected, newly created, deleted, and New chat states so the conversation URL remains synchronized with the visible workspace.
+
+### Validation
+
+- Added regression coverage for category navigation, preserved sidebar state, the delete dialog, profile navigation, and restoring an active chat from the URL.
+- Verified authenticated `/home`, category, profile, agent, and chat flows with the local QA account through Playwright in Chrome.
+- Tested authentication and workspace layouts across desktop, tablet, landscape, and mobile viewport sizes, including widths down to 320 pixels.
+- Completed the full 40-test Vitest suite, ESLint, TypeScript checking, and the optimized Next.js production build successfully.
+
 ## September 22, 2026
 
 ### Knowledge Navigation and Chat Experience

@@ -20,14 +20,8 @@ export default function Home() {
           />
 
           <header className={styles.intro}>
-            <h1 id="signup-heading">
-              <span className={styles.desktopHeading}>Create Your Account</span>
-              <span className={styles.mobileHeading}>Welcome Back!</span>
-            </h1>
-            <p>
-              <span className={styles.desktopHeading}>Create your account and start your journey with us.</span>
-              <span className={styles.mobileHeading}>Please enter your credentials to continue.</span>
-            </p>
+            <h1 id="signup-heading">Create Your Account</h1>
+            <p>Create your account and start your journey with us.</p>
           </header>
 
           <AuthForm mode="signup" />

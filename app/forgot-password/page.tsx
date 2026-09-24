@@ -29,10 +29,17 @@ export default function ForgotPasswordPage() {
 
           <header className={styles.intro}>
             <h1 id="forgot-password-heading">Forgot Password!</h1>
-            <p>Password reset is not available yet. Please contact your administrator for account access.</p>
+            <p>Please provide your registered email address to receive the verification email.</p>
           </header>
 
-          <p className={styles.unavailableNotice} role="status">This feature requires a backend password-reset endpoint.</p>
+          <div className={styles.form}>
+            <div className={styles.field}>
+              <label htmlFor="reset-email">Email Address</label>
+              <input id="reset-email" type="email" placeholder="Example@gmail.com" autoComplete="email" disabled aria-describedby="reset-notice" />
+            </div>
+            <button className={styles.submit} type="button" disabled>Send reset link</button>
+            <p className={styles.unavailableNotice} id="reset-notice" role="status">Password reset is not available yet. Contact your administrator for account access.</p>
+          </div>
 
           <Link className={styles.backLink} href="/login">
             <svg viewBox="0 0 24 24" aria-hidden="true">

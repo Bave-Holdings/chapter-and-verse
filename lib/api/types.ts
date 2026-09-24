@@ -26,17 +26,20 @@ export type CitationSource = {
   index: number;
   document_id: string;
   doc_name: string;
-  source_path: string;
   page_number: number;
   section_id: string | null;
   sub_section_id: string | null;
-  citation_url: string;
-  text_preview?: string;
-  score?: number | null;
   title?: string | null;
-  chunk_id?: string | null;
   document_version?: string | null;
+  text_preview?: string | null;
+  citation_url?: string | null;
+  chunk_id?: string | null;
   source_kind?: string | null;
+  cited_passages?: Array<{
+    claim: string;
+    passage: string;
+    page_number: number;
+  }>;
 };
 
 export type SourceIds = {
@@ -84,6 +87,11 @@ export type AnswerPresentation = {
   documents: Array<SourceIds & { label: string }>;
   next_fact_needed: string | null;
   verify_line: string | null;
+  citation_passages?: Array<{
+    source_id: number;
+    claim: string;
+    passage: string;
+  }>;
 };
 
 export type AnswerUiState = {

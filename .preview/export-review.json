@@ -1,0 +1,55 @@
+{
+  "title": "FHA self-employed, 18 months",
+  "agent": "FHA Handbook 4000.1",
+  "messages": [
+    {
+      "role": "user",
+      "content": "Can I use self-employment income with 18 months of history?",
+      "createdAt": "2026-09-24T08:00:00Z",
+      "sources": [],
+      "presentation": null
+    },
+    {
+      "role": "assistant",
+      "content": "Self-employment income may qualify with prior experience in the same line of work. Review the agency requirements and your firm’s overlay. [1] [2]",
+      "createdAt": "2026-09-24T08:00:00Z",
+      "sources": [
+        {
+          "index": 1,
+          "document_id": "hud",
+          "doc_name": "HUD Handbook 4000.1.pdf",
+          "page_number": 212,
+          "section_id": "II.A.4.c",
+          "sub_section_id": "Self-employment income",
+          "document_version": "2026.2",
+          "citation_url": "/api/v1/documents/hud/file#page=212",
+          "cited_passages": [
+            {
+              "claim": "Income requirements",
+              "passage": "FHA permits income from self-employment when the borrower has been self-employed for at least two years, or between one and two years with prior experience in the same line of work.",
+              "page_number": 212
+            }
+          ]
+        },
+        {
+          "index": 2,
+          "document_id": "overlay",
+          "doc_name": "Credit Policy 4.2.pdf",
+          "page_number": 2,
+          "section_id": "4.2",
+          "sub_section_id": null,
+          "source_kind": "overlay",
+          "citation_url": "/api/v1/documents/overlay/file#page=2",
+          "cited_passages": [
+            {
+              "claim": "Firm overlay",
+              "passage": "Apply the firm overlay after reviewing the agency guidance.",
+              "page_number": 2
+            }
+          ]
+        }
+      ],
+      "presentation": null
+    }
+  ]
+}

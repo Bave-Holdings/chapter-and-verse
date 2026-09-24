@@ -32,10 +32,6 @@ export default function LoginPage() {
 
           <AuthForm mode="login" />
 
-          <div className={styles.authHelp}>
-            <Link className={styles.forgotLink} href="/forgot-password">Forgot password?</Link>
-          </div>
-
           <p className={styles.loginPrompt}>
             Don&apos;t have an account? <Link href="/">Sign up</Link>
           </p>

@@ -8,7 +8,6 @@ const source: CitationSource = {
   index: 1,
   document_id: "doc-1",
   doc_name: "Selling Guide.pdf",
-  source_path: "Selling Guide.pdf",
   page_number: 12,
   section_id: "B3-6-02",
   sub_section_id: null,
@@ -40,6 +39,24 @@ const presentation: AnswerPresentation = {
 };
 
 describe("AnswerPresentationView", () => {
+  it("keeps document selection separate from opening its compact citation", () => {
+    const select = vi.fn();
+    const change = vi.fn();
+    const repeated = { ...source, sub_section_id: "Documentation Requirements: Documentation Requirements" };
+    const { container, rerender } = render(<AnswerPresentationView presentation={presentation} sources={[repeated]} onCitationSelect={select} onUiStateChange={change} />);
+    const document = within(container.querySelector('[data-cv-document="document-0"]')!);
+
+    fireEvent.click(document.getByRole("button", { name: "Documentation Requirements" }));
+    expect(select).toHaveBeenCalledWith(repeated, [repeated]);
+    expect(change).not.toHaveBeenCalled();
+    expect(document.getByRole("checkbox", { name: "Paystubs" })).not.toBeChecked();
+
+    fireEvent.click(document.getByText("Paystubs"));
+    expect(change).toHaveBeenLastCalledWith({ completed_step_ids: [], checked_document_ids: ["document-0"] });
+    rerender(<AnswerPresentationView presentation={presentation} sources={[repeated]} onCitationSelect={select} onUiStateChange={change} uiState={change.mock.lastCall![0]} />);
+    expect(document.getByRole("checkbox", { name: "Paystubs" })).toBeChecked();
+  });
+
   it("renders deterministic ordering, computed counts, and restored checklist state", () => {
     const onUiStateChange = vi.fn();
     const { container } = render(<AnswerPresentationView
@@ -66,17 +83,19 @@ describe("AnswerPresentationView", () => {
     });
   });
 
-  it("opens only matched citation sources and never interprets presentation text as HTML", () => {
+  it("selects only matched citation sources without navigating and never interprets presentation text as HTML", () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    const select = vi.fn();
     const unsafe = { ...presentation, key_callout: "<img src=x onerror=alert(1)>" };
-    const { container } = render(<AnswerPresentationView presentation={unsafe} sources={[source]} />);
+    const { container } = render(<AnswerPresentationView presentation={unsafe} sources={[source]} onCitationSelect={select} />);
 
     expect(container.querySelector("img")).toBeNull();
     expect(screen.getByText("<img src=x onerror=alert(1)>")).toBeInTheDocument();
-    const citation = screen.getAllByRole("button", { name: "B3-6-02 · p. 12" })[0];
+    const citation = screen.getAllByRole("button", { name: "B3-6-02" })[0];
     expect(citation).toHaveAttribute("title", "B3-6-02 · Selling Guide.pdf · p. 12");
     fireEvent.click(citation);
     expect(citation).toHaveAttribute("aria-pressed", "true");
-    expect(open).toHaveBeenCalledWith(source.citation_url, "_blank", "noopener,noreferrer");
+    expect(select).toHaveBeenCalledWith(source, [source]);
+    expect(open).not.toHaveBeenCalled();
   });
 });

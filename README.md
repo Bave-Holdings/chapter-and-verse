@@ -30,6 +30,23 @@ npm run lint
 npm run build
 ```
 
+Browser navigation regression tests use mocked API responses and do not need the
+FastAPI service. Install Chromium once, then run:
+
+```bash
+npx playwright install chromium
+npm run test:e2e
+```
+
+The runner starts or reuses the development server on port 3000. To test a running
+production build, set `PLAYWRIGHT_BASE_URL` to its URL. `PLAYWRIGHT_CHANNEL=chrome`
+can be used with an installed Google Chrome instead of Playwright's Chromium.
+
+Workspace routes share `app/(workspace)/layout.tsx`; keep navigation inside that
+layout to retain the shell and its loaded data. `WorkspaceShell` reads the current
+pathname, route parameters, and chat query through the Next.js App Router. Use
+`next/link` for page links and `next/navigation` for programmatic navigation.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
