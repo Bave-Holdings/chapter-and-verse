@@ -7,7 +7,6 @@ const source = {
   index: 1,
   document_id: "doc-1",
   doc_name: "Guide.pdf",
-  source_path: "Guide.pdf",
   page_number: 12,
   section_id: "A2-1-01",
   sub_section_id: null,
@@ -30,20 +29,23 @@ describe("MarkdownMessage", () => {
     expect(document.querySelector("script")).toBeNull();
   });
 
-  it("turns numeric citations into controls and highlights the matching source", () => {
+  it("selects numeric citations without navigating and highlights the matching source", () => {
     const scroll = vi.spyOn(Element.prototype, "scrollIntoView");
-    render(<MarkdownMessage content="See the rule [1]." sources={[source, uncitedSource]} />);
+    const select = vi.fn();
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    render(<MarkdownMessage content="See the rule [1]." sources={[source, uncitedSource]} onCitationSelect={select} />);
     fireEvent.click(screen.getByRole("button", { name: "Show source 1" }));
-    const link = screen.getByRole("link", { name: /Guide\.pdf.*page 12/i });
-    expect(link).toHaveAttribute("href", source.citation_url);
-    expect(link.className).toMatch(/highlightedSource/);
-    expect(screen.queryByRole("link", { name: /Uncited\.pdf/i })).not.toBeInTheDocument();
+    const sourceButton = screen.getByRole("button", { name: "A2-1-01" });
+    expect(sourceButton.className).toMatch(/highlightedSource/);
+    expect(select).toHaveBeenCalledWith(source, [source]);
+    expect(open).not.toHaveBeenCalled();
+    expect(screen.queryByRole("button", { name: /Uncited\.pdf/i })).not.toBeInTheDocument();
     expect(scroll).toHaveBeenCalled();
   });
 
   it("does not render a source list when the answer has no citations", () => {
     render(<MarkdownMessage content="The answer does not cite a document." sources={[source]} />);
     expect(screen.queryByLabelText("Sources")).not.toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: /Guide\.pdf/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Guide\.pdf/i })).not.toBeInTheDocument();
   });
 });

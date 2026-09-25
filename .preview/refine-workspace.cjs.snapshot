@@ -1,0 +1,140 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+const fs = require('node:fs');
+const postcss = require('postcss');
+const file = 'app/home/workspace.tsx';
+let source = fs.readFileSync(file, 'utf8');
+fs.writeFileSync('.preview/workspace-before-scope.tsx.snapshot', source);
+function replace(before, after) {
+  if (!source.includes(before)) throw new Error('Missing target: '+before.slice(0,100));
+  source = source.replace(before, after);
+}
+source = source.replace(/ \| "sidebarCollapse" \| "sidebarExpand"/, '');
+source = source.replace(/^    sidebar(?:Collapse|Expand):.*\r?\n/gm, '');
+source = source.replace(/^  const \[(?:categoryDrawerOpen|browsingMortgage|sidebarCollapsed),.*\r?\n/gm, '');
+replace('  const [chats, setChats] = useState<Chat[]>([]);', '  const [chats, setChats] = useState<Chat[]>([]);\n  const [historyLoading, setHistoryLoading] = useState(true);\n  const [historyError, setHistoryError] = useState("");');
+replace('  const composer = useRef<HTMLInputElement>(null);', '  const composer = useRef<HTMLInputElement>(null);\n  const recentHistory = useRef<HTMLElement>(null);');
+replace('  const hasCategoryContext = categoryMode || categoryDrawerOpen;', '  const hasCategoryContext = categoryMode;');
+source = source.replace(/  function categoryPanelPersists\(\) \{[\s\S]*?\n  \}\r?\n\r?\n/, '');
+const start = source.indexOf('  useEffect(() => {\n    if (!agentKey || profile)');
+// Normalize line endings before locating multi-line blocks.
+source = source.replace(/\r\n/g, '\n');
+const historyStart = source.indexOf('  useEffect(() => {\n    if (!agentKey || profile)');
+const historyEnd = source.indexOf('\n\n  useEffect', historyStart + 1);
+if (historyStart < 0 || historyEnd < 0) throw new Error('History effect not found');
+source = source.slice(0, historyStart) + `  useEffect(() => {
+    if (agents.length === 0) return;
+    const controller = new AbortController();
+    setHistoryLoading(true);
+    setHistoryError("");
+    Promise.allSettled(agents.map((agent) => chatsApi.list(agent.key, controller.signal)))
+      .then((results) => {
+        if (controller.signal.aborted) return;
+        const groups = results.flatMap((result) => result.status === "fulfilled" ? [result.value] : []);
+        setChats((current) => mergeChats(...groups, current));
+        const failures = results.filter((result) => result.status === "rejected");
+        if (failures.length) {
+          setHistoryError(groups.length ? "Some conversations could not be loaded." : "Unable to load recent conversations.");
+          const unauthorized = failures.find((result) => result.reason instanceof ApiError && result.reason.status === 401);
+          if (unauthorized) reportError(unauthorized.reason);
+        }
+      })
+      .finally(() => { if (!controller.signal.aborted) setHistoryLoading(false); });
+    return () => controller.abort();
+  }, [agents, reportError]);` + source.slice(historyEnd);
+const categoryEffectStart = source.indexOf('  useEffect(() => {\n    if (!categoryDrawerOpen)');
+const categoryEffectEnd = source.indexOf('\n\n  useEffect', categoryEffectStart + 1);
+if (categoryEffectStart < 0 || categoryEffectEnd < 0) throw new Error('Category effect not found');
+source = source.slice(0, categoryEffectStart) + source.slice(categoryEffectEnd + 2);
+source = source.replace(/^    setChats\(\[\]\);\n/gm, '');
+source = source.replace(/^    set(?:CategoryDrawerOpen|BrowsingMortgage)\([^\n]*\);\n/gm, '');
+replace('  function selectAgent(agent: Agent, keepCategoryDrawer = false) {', '  function selectAgent(agent: Agent) {');
+replace('    const requestedAgentKey = agentKey;\n', '');
+replace('      if (chat.agent_key !== requestedAgentKey) throw new Error("This chat belongs to a different knowledge agent.");', `      if (activeChatLoad.current !== controller || controller.signal.aborted) return;
+      const chatAgent = agents.find((agent) => agent.key === chat.agent_key);
+      if (!chatAgent) throw new Error("The knowledge scope for this conversation is unavailable.");
+      setAgentKey(chatAgent.key);`);
+replace('      if (categoryMode && selectedAgent) {\n        router.push(`/category/${selectedAgent.slug}?chat=${encodeURIComponent(chat.id)}`, { scroll: false });\n      }', '      router.push(`/category/${chatAgent.slug}?chat=${encodeURIComponent(chat.id)}`, { scroll: false });');
+replace('    setLoadingChat(true);\n    setStatus("");\n    try {\n      const chat = await chatsApi.get(chatId, controller.signal);', '    setLoadingChat(true);\n    setDraft("");\n    setStatus("");\n    setDrawerOpen(false);\n    try {\n      const chat = await chatsApi.get(chatId, controller.signal);');
+replace('      if (!(cause instanceof DOMException && cause.name === "AbortError")) reportError(cause, "Unable to load this chat.");', '      if (activeChatLoad.current === controller && !controller.signal.aborted) reportError(cause, "Unable to load this chat.");');
+replace('      setChats((items) => items.map((chat) => chat.id === chatId ? updated : chat));', '      setChats((items) => mergeChats(items.map((chat) => chat.id === chatId ? updated : chat)));');
+replace('        setChats((items) => [created, ...items]);', '        setChats((items) => mergeChats(items, [created]));');
+replace('      if (!terminalError) chatsApi.list(answeringAgent.key).then(setChats).catch(() => undefined);', '      if (!terminalError) chatsApi.list(answeringAgent.key)\n        .then((updated) => setChats((current) => mergeChats(current, updated)))\n        .catch(() => undefined);');
+const toggleStart = source.indexOf('  function toggleHistory()');
+const toggleEnd = source.indexOf('\n\n  function navigation', toggleStart);
+source = source.slice(0,toggleStart) + `  function showRecentChats() {
+    if (window.matchMedia?.("(max-width: 767px)").matches) setDrawerOpen(true);
+    else {
+      recentHistory.current?.scrollIntoView({ block: "nearest" });
+      recentHistory.current?.focus();
+    }
+  }` + source.slice(toggleEnd);
+replace('      {categoryMode && !mobile && <Link className={styles.categoryBack} href="/home" aria-label="Back to home"><Icon name="back" /></Link>}\n', '');
+source = source.replace(/className=\{`\$\{styles.mortgageParent\}[^\n]+/, 'className={`${styles.mortgageParent} ${mortgageSelected ? styles.activeCategory : ""}`}');
+replace('            aria-expanded={categoryDrawerOpen}\n            aria-controls="mortgage-category-drawer"\n            data-active={mortgageSelected || categoryDrawerOpen}\n            onClick={() => {\n              setBrowsingMortgage(true);\n              setCategoryDrawerOpen(true);\n              if (mobile) setDrawerOpen(false);\n            }}', `            aria-pressed={mortgageSelected}
+            data-active={mortgageSelected}
+            disabled={streaming || !mortgageAgents.some((agent) => agent.live)}
+            onClick={() => {
+              const agent = mortgageSelected && selectedAgent?.live ? selectedAgent : mortgageAgents.find((agent) => agent.live);
+              if (agent) selectAgent(agent);
+            }}`);
+replace('        disabled={!agent.live}', '        disabled={!agent.live || streaming}');
+const recentStart = source.indexOf('      {!categoryDrawerOpen && <section');
+const recentEnd = source.indexOf('\n      <div className={styles.sidebarAccount}', recentStart);
+source = source.slice(0, recentStart) + `      <section className={styles.recentChats} aria-label="Recent conversations" ref={mobile ? undefined : recentHistory} tabIndex={-1}>
+        <h2>RECENT</h2>
+        {historyLoading && <p role="status">Loading conversations…</p>}
+        {historyError && <p role="status">{historyError}</p>}
+        {!historyLoading && !historyError && chats.length === 0 && <p>No conversations yet.</p>}
+        <div className={styles.recentChatList}>
+          {chats.map((chat) => renamingId === chat.id ? (
+            <form className={styles.renameForm} key={chat.id} onSubmit={(event) => void renameChat(event, chat.id)}>
+              <input value={renameDraft} onChange={(event) => setRenameDraft(event.target.value)} maxLength={200} aria-label="Chat title" autoFocus />
+              <button type="submit">Save</button><button type="button" onClick={() => setRenamingId(null)}>Cancel</button>
+            </form>
+          ) : (
+            <div className={styles.recentChatItem} key={chat.id} data-active={activeChatId === chat.id}>
+              <button className={styles.recentChatTitle} type="button" title={chat.title} aria-label={chat.title} aria-pressed={activeChatId === chat.id} disabled={streaming} onClick={() => void loadChat(chat.id)}>
+                <span>{chat.title}</span><small>{scopeName(agents.find((agent) => agent.key === chat.agent_key) ?? null)}</small>
+              </button>
+              <button className={styles.recentChatAction} type="button" aria-label={"Rename " + chat.title} onClick={() => { setRenamingId(chat.id); setRenameDraft(chat.title); }}>✎</button>
+              <button className={styles.recentChatAction} type="button" aria-label={"Delete " + chat.title} onClick={(event) => requestDelete(chat, event.currentTarget)}>×</button>
+            </div>
+          ))}
+        </div>
+      </section>` + source.slice(recentEnd);
+source = source.replace(/ \$\{categoryDrawerOpen \? styles.categoryDrawerOpen : ""\} \$\{sidebarCollapsed \? styles.sidebarCollapsed : ""\}/, '');
+const toggleButtonStart = source.indexOf('        <button\n          className={styles.sidebarToggle}');
+const toggleButtonEnd = source.indexOf('        {navigation()}', toggleButtonStart);
+source = source.slice(0,toggleButtonStart) + source.slice(toggleButtonEnd);
+const railStart = source.indexOf('      {categoryDrawerOpen && <>');
+const railEnd = source.indexOf('      <header className={styles.header}>', railStart);
+source = source.slice(0,railStart) + source.slice(railEnd);
+const scopeStart = source.indexOf('          <button type="button" className={styles.scopeButton}');
+const scopeEnd = source.indexOf('\n',scopeStart);
+source = source.slice(0,scopeStart) + `          <label className={styles.scopeControl}>
+            <span>Scope</span>
+            <select aria-label="Agent scope" value={agentKey} disabled={streaming || loadingChat} onChange={(event) => {
+              const agent = agents.find((item) => item.key === event.target.value);
+              if (agent) selectAgent(agent);
+            }}>
+              {mortgageAgents.length > 0 && <optgroup label="Mortgage">{mortgageAgents.map((agent) => <option key={agent.key} value={agent.key} disabled={!agent.live}>{scopeName(agent)}</option>)}</optgroup>}
+              {otherAgents.map((agent) => <option key={agent.key} value={agent.key} disabled={!agent.live}>{displayName(agent)}</option>)}
+            </select>
+            <Icon name="chevron" />
+          </label>` + source.slice(scopeEnd);
+replace('aria-label="Toggle chat history" aria-expanded={categoryDrawerOpen} onClick={toggleHistory}', 'aria-label="View recent chats" onClick={showRecentChats}');
+replace('        {!profile && (hasCategoryContext || showConversation) && <div className={styles.conversationToolbar}>', '        {!profile && <div className={styles.conversationToolbar}>');
+// Render the mobile navigation only while open so chat actions have a single owner.
+replace('        <div className={styles.drawerContent}>{navigation(true)}</div>', '        {drawerOpen && <div className={styles.drawerContent}>{navigation(true)}</div>}');
+fs.writeFileSync(file, source);
+
+const cssFile = 'app/home/workspace.module.css';
+const css = postcss.parse(fs.readFileSync(cssFile,'utf8'));
+const obsolete = /\.(?:sidebarCollapsed|sidebarToggle|categoryDrawerOpen|categoryRail|categoryHeading|categoryChooser|categoryList|categoryDot|activeDrawerCategory|categoryBackdrop|categoryBrowser|categoryBack|categoryLogout|chatHistory|chatHistoryHeading|policyList|chatListItem|chatTitle|chatTitleText|chatAction|selectedPolicy|newChatButton|newChatIcon|emptyChats|scopeButton)\b/;
+css.walkRules(rule=>{
+  const selectors=rule.selectors.filter(selector=>!obsolete.test(selector));
+  if(selectors.length) rule.selectors=selectors;
+  else rule.remove();
+});
+css.walkAtRules(rule=>{if(rule.nodes && rule.nodes.length===0)rule.remove();});
+fs.writeFileSync(cssFile,css.toString());

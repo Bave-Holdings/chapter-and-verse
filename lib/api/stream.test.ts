@@ -38,6 +38,34 @@ describe("parseSseStream", () => {
     ]), (event) => events.push(event));
     expect(events).toEqual([{ event: "token", data: { text: "ok" } }]);
   });
+
+  it("parses a presentation frame without requiring token events", async () => {
+    const events: StreamEvent[] = [];
+    const presentation = {
+      scope: { label: "Mortgage", detail: "Guide", not_found: false },
+      verdict: { type: "clear", kicker: "Verdict", text: "Yes", reason: "Allowed", source_ids: [1] },
+      borrower_script: null,
+      key_callout: null,
+      statuses: [],
+      steps: [],
+      plan_b: [],
+      easiest_fix: null,
+      donts: [],
+      documents: [],
+      next_fact_needed: null,
+      verify_line: null,
+    } as const;
+
+    await parseSseStream(chunkedStream([
+      `event: presentation\ndata: ${JSON.stringify({ presentation })}\n\n`,
+      "event: done\ndata: {\"status\":\"answered\"}\n\n",
+    ]), (event) => events.push(event));
+
+    expect(events).toEqual([
+      { event: "presentation", data: { presentation } },
+      { event: "done", data: { status: "answered" } },
+    ]);
+  });
 });
 
 describe("streamQuestion", () => {

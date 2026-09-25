@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { apiRequest, authApi } from "./client";
+import { apiRequest, authApi, chatsApi } from "./client";
 
 describe("apiRequest", () => {
   afterEach(() => vi.unstubAllGlobals());
@@ -44,5 +44,28 @@ describe("apiRequest", () => {
       password: "password8",
     });
     expect(String(request.body)).not.toContain("confirm_password");
+  });
+
+  it("patches message UI state with the exact checklist payload", async () => {
+    const uiState = {
+      completed_step_ids: ["step-0"],
+      checked_document_ids: ["document-0"],
+    };
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      message_id: "message/1",
+      ui_state: uiState,
+    }), { status: 200 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await chatsApi.updateMessageUiState("chat/1", "message/1", uiState);
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "/api/v1/chats/chat%2F1/messages/message%2F1/ui-state",
+      expect.objectContaining({
+        method: "PATCH",
+        body: JSON.stringify(uiState),
+      }),
+    );
+    expect(JSON.parse(String(fetchMock.mock.calls[0][1].body))).toEqual(uiState);
   });
 });

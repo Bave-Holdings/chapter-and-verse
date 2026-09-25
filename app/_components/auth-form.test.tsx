@@ -20,7 +20,7 @@ describe("AuthForm", () => {
     fireEvent.change(screen.getByLabelText("Email Address"), { target: { value: "user@example.com" } });
     fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
     fireEvent.click(screen.getByRole("button", { name: "Log In" }));
-    await waitFor(() => expect(authApi.login).toHaveBeenCalledWith("user@example.com", "secret"));
+    await waitFor(() => expect(authApi.login).toHaveBeenCalledWith("user@example.com", "secret", false));
     expect(replace).toHaveBeenCalledWith("/home");
   });
 
@@ -64,12 +64,21 @@ describe("AuthForm", () => {
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/home"));
   });
 
-  it("keeps login limited to email and password", () => {
+  it("renders login options and submits the remember-me choice", async () => {
+    vi.spyOn(authApi, "login").mockResolvedValue({ id: "u", email: "user@example.com", role: "user", created_at: "now" });
     render(<AuthForm mode="login" />);
     const form = screen.getByRole("button", { name: "Log In" }).closest("form")!;
-    expect(Array.from(form.querySelectorAll("input"), (input) => input.name)).toEqual(["email", "password"]);
+    expect(Array.from(form.querySelectorAll("input"), (input) => input.name)).toEqual(["email", "password", "remember_me"]);
     expect(screen.queryByLabelText("Full Name")).not.toBeInTheDocument();
     expect(screen.queryByLabelText("Confirm Password")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Forgot password?" })).toHaveAttribute("href", "/forgot-password");
+
+    fireEvent.change(screen.getByLabelText("Email Address"), { target: { value: "user@example.com" } });
+    fireEvent.change(screen.getByLabelText("Password"), { target: { value: "secret" } });
+    fireEvent.click(screen.getByLabelText("Remember me"));
+    fireEvent.click(screen.getByRole("button", { name: "Log In" }));
+
+    await waitFor(() => expect(authApi.login).toHaveBeenCalledWith("user@example.com", "secret", true));
   });
 
   it("shows normalized API failures", async () => {

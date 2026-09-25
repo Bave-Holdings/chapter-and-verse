@@ -1,0 +1,108 @@
+/* eslint-disable @typescript-eslint/no-require-imports */
+const fs=require('node:fs');
+const file='app/home/workspace.test.tsx';
+let text=fs.readFileSync(file,'utf8');
+function test(oldName,body) {
+ const escaped=oldName.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+ const pattern=new RegExp('  it\\("'+escaped+'"[\\s\\S]*?\\n  \\}\\);');
+ if(!pattern.test(text))throw new Error('Not found: '+oldName);
+ text=text.replace(pattern,body);
+}
+test('opens the Mortgage category drawer and routes category choices',`  it("selects Fannie Mae and FHA from the header without a category panel", async () => {
+    const keyboard = userEvent.setup();
+    render(<KnowledgeWorkspace categoryMode initialAgentSlug="mortgage" />);
+    const scope = await screen.findByRole("combobox", { name: "Agent scope" });
+    expect(scope).toHaveValue("mortgage_guidelines");
+    expect(within(scope).getByRole("option", { name: "Fannie Mae" })).toBeEnabled();
+    await keyboard.selectOptions(scope, "fha_handbook");
+    expect(scope).toHaveValue("fha_handbook");
+    expect(mocks.push).toHaveBeenCalledWith("/category/fha", { scroll: false });
+    expect(screen.getByRole("group", { name: "FHA Handbook 4000.1 quick questions" })).toBeInTheDocument();
+    await keyboard.selectOptions(scope, "mortgage_guidelines");
+    expect(mocks.push).toHaveBeenCalledWith("/category/mortgage", { scroll: false });
+    expect(screen.queryByRole("complementary", { name: /category drawer/i })).not.toBeInTheDocument();
+    expect(mocks.me).toHaveBeenCalledTimes(1);
+  });`);
+test('keeps Fannie and FHA chat histories isolated when switching agents',`  it("keeps all scope histories visible and selects a chat's owning agent", async () => {
+    const complianceChat = { ...chat, id: "compliance-chat", agent_key: "compliance", title: "Compliance history" };
+    const olderChats = Array.from({ length: 5 }, (_, index) => ({ ...chat, id: "older-" + index, title: "Older chat " + index, updated_at: "2025-01-01T00:00:00Z" }));
+    const newestFha = { ...fhaChat, updated_at: "2026-02-01T00:00:00Z" };
+    mocks.listChats.mockImplementation(async (key: string) => key === "fha_handbook" ? [newestFha] : key === "compliance" ? [complianceChat] : [chat, ...olderChats]);
+    mocks.getChat.mockImplementation(async (id: string) => ({
+      ...(id === fhaChat.id ? fhaChat : chat),
+      messages: [{ id: "message-1", chat_id: id, role: "user", content: id === fhaChat.id ? "FHA question" : "Fannie question", sources: [], created_at: chat.created_at }],
+    }));
+    render(<KnowledgeWorkspace categoryMode initialAgentSlug="mortgage" />);
+    await screen.findByRole("button", { name: "FHA chat" });
+    const history = screen.getByRole("region", { name: "Recent conversations" });
+    expect(within(history).getAllByRole("button", { pressed: false }).map((button) => button.getAttribute("aria-label"))).toEqual([
+      "FHA chat", "Chat one", "Compliance history", ...olderChats.map((item) => item.title),
+    ]);
+    expect(mocks.listChats).toHaveBeenCalledWith("mortgage_guidelines", expect.any(AbortSignal));
+    expect(mocks.listChats).toHaveBeenCalledWith("fha_handbook", expect.any(AbortSignal));
+    expect(mocks.listChats).toHaveBeenCalledWith("compliance", expect.any(AbortSignal));
+
+    fireEvent.click(screen.getByRole("button", { name: "FHA chat" }));
+    await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent("FHA question"));
+    expect(screen.getByRole("combobox", { name: "Agent scope" })).toHaveValue("fha_handbook");
+    expect(mocks.push).toHaveBeenCalledWith("/category/fha?chat=chat-fha", { scroll: false });
+    expect(screen.getByRole("button", { name: "Chat one" })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Chat one" }));
+    await waitFor(() => expect(screen.getByRole("log")).toHaveTextContent("Fannie question"));
+    expect(screen.getByRole("combobox", { name: "Agent scope" })).toHaveValue("mortgage_guidelines");
+    expect(screen.getByRole("button", { name: "FHA chat" })).toBeInTheDocument();
+  });`);
+text=text.replace('loads, renames, and deletes chats from the category rail','loads, renames, and deletes chats from the black sidebar');
+text=text.replace('keeps the category drawer open and restores quick questions for a new chat','restores quick questions for a new chat without changing the scope or history');
+text=text.replaceAll('screen.getByRole("button", { name: "New chat" })','screen.getByRole("button", { name: "New Question" })');
+text=text.replace('    expect(screen.getByRole("complementary", { name: "Mortgage category drawer" })).toBeInTheDocument();\n    expect(screen.getByRole("button", { name: "Mortgage" })).toHaveAttribute("aria-expanded", "true");','    expect(screen.queryByRole("complementary", { name: /category drawer/i })).not.toBeInTheDocument();\n    expect(screen.getByRole("button", { name: "Chat one" })).toBeInTheDocument();');
+text=text.replace('starts one chat directly from a subcategory quick question and preserves the category panel','starts one chat directly from a scope quick question');
+const quickStart=text.indexOf('    expect(screen.getByRole("complementary", { name: "Mortgage category drawer" })).toBeInTheDocument();',text.indexOf('it("starts one chat'));
+const quickEnd=text.indexOf('\n  });',quickStart);
+if(quickStart<0||quickEnd<0)throw new Error('quick question test not found');
+text=text.slice(0,quickStart)+'    expect(screen.queryByRole("complementary", { name: /category drawer/i })).not.toBeInTheDocument();'+text.slice(quickEnd);
+test('manually collapses and expands the black menu without hiding the category panel',`  it("has a permanent desktop sidebar with no collapse or category controls", async () => {
+    render(<KnowledgeWorkspace categoryMode initialAgentSlug="mortgage" />);
+    const sidebar = await screen.findByRole("complementary", { name: "Main navigation" });
+    expect(within(sidebar).getByRole("button", { name: "New Question" })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Collapse sidebar|Expand sidebar/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("complementary", { name: /category drawer/i })).not.toBeInTheDocument();
+  });`);
+test('keeps navigation usable through the mobile drawer',`  it("keeps navigation and all recent chats usable through the mobile drawer", async () => {
+    mocks.listChats.mockImplementation(async (key: string) => key === "fha_handbook" ? [fhaChat] : key === "mortgage_guidelines" ? [chat] : []);
+    render(<KnowledgeWorkspace categoryMode initialAgentSlug="mortgage" />);
+    await screen.findByRole("button", { name: "FHA chat" });
+    fireEvent.click(screen.getByRole("button", { name: "Open navigation" }));
+    const dialog = screen.getByRole("dialog", { name: "Navigation" });
+    expect(dialog).toHaveAttribute("open");
+    expect(within(dialog).getByRole("button", { name: "Chat one" })).toBeInTheDocument();
+    expect(within(dialog).getByRole("button", { name: "FHA chat" })).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole("button", { name: "Mortgage" }));
+    expect(dialog).not.toHaveAttribute("open");
+    fireEvent.change(screen.getByRole("combobox", { name: "Agent scope" }), { target: { value: "fha_handbook" } });
+    expect(mocks.push).toHaveBeenCalledWith("/category/fha", { scroll: false });
+  });`);
+test('prepares topic questions without overwriting a draft and toggles history',`  it("prepares topic questions without overwriting a draft and focuses sidebar history", async () => {
+    render(<KnowledgeWorkspace categoryMode initialAgentSlug="mortgage" />);
+    const input = await screen.findByRole("textbox", { name: "Write a message" });
+    expect(screen.getByRole("button", { name: "Export conversation" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("button", { name: "Credit" }));
+    expect(input).toHaveValue("What are the credit requirements?");
+    expect(input).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Income" })).toBeDisabled();
+    expect(mocks.stream).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: "View recent chats" }));
+    expect(screen.getByRole("region", { name: "Recent conversations" })).toHaveFocus();
+    expect(input).toHaveValue("What are the credit requirements?");
+  });`);
+test('can browse Mortgage libraries while another library is selected',`  it("can switch to a Mortgage scope while another library is selected", async () => {
+    mocks.agents.mockResolvedValue([...agents.slice(0, 2), { ...agents[2], live: true }]);
+    render(<KnowledgeWorkspace categoryMode initialAgentSlug="compliance" />);
+    const scope = await screen.findByRole("combobox", { name: "Agent scope" });
+    expect(scope).toHaveValue("compliance");
+    fireEvent.change(scope, { target: { value: "fha_handbook" } });
+    expect(mocks.push).toHaveBeenCalledWith("/category/fha", { scroll: false });
+    expect(scope).toHaveValue("fha_handbook");
+  });`);
+fs.writeFileSync(file,text);

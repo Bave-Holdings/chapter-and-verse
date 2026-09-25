@@ -1,4 +1,4 @@
-import type { Agent, Chat, ChatDetail, User } from "./types";
+import type { Agent, AnswerUiState, Chat, ChatDetail, User } from "./types";
 
 const API_PREFIX = "/api/v1";
 
@@ -78,12 +78,12 @@ export const authApi = {
       method: "POST",
       body: JSON.stringify({ full_name: fullName, email, password }),
     }),
-  login: (email: string, password: string) =>
+  login: (email: string, password: string, rememberMe = false) =>
     apiRequest<User>("/auth/login", {
       method: "POST",
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ email, password, remember_me: rememberMe }),
     }),
-  me: () => apiRequest<User>("/auth/me"),
+  me: (signal?: AbortSignal) => apiRequest<User>("/auth/me", { cache: "no-store", signal }),
   logout: () => apiRequest<{ status: string }>("/auth/logout", { method: "POST" }),
 };
 
@@ -110,6 +110,21 @@ export const chatsApi = {
     apiRequest<{ status: string; id: string }>(`/chats/${encodeURIComponent(chatId)}`, {
       method: "DELETE",
     }),
+  updateMessageUiState: (
+    chatId: string,
+    messageId: string,
+    uiState: AnswerUiState,
+  ) =>
+    apiRequest<{
+      message_id: string;
+      ui_state: AnswerUiState;
+    }>(
+      `/chats/${encodeURIComponent(chatId)}/messages/${encodeURIComponent(messageId)}/ui-state`,
+      {
+        method: "PATCH",
+        body: JSON.stringify(uiState),
+      },
+    ),
 };
 
 export const feedbackApi = {
