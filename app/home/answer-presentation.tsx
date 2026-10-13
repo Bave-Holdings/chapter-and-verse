@@ -149,7 +149,15 @@ export function AnswerPresentationView({
     presentation.donts.length,
     presentation.documents.length,
   ].filter(Boolean).length;
-  const complex = sectionCount >= 4 || presentation.statuses.length >= 4 || presentation.steps.length >= 3;
+  // Saved answers without answer_kind retain their original layout heuristic.
+  const complex = presentation.answer_kind === "borrower_scenario" ||
+    (presentation.answer_kind == null && (sectionCount >= 4 || presentation.statuses.length >= 4 || presentation.steps.length >= 3));
+  const verdictHeadline = {
+    clear: "Yes",
+    fixable: "Possibly doable",
+    blocker: "Blocker to check",
+    notfound: "Not in your documents",
+  }[presentation.verdict.type];
   const byIndex = useMemo(() => new Map(sources.map((source) => [source.index, source])), [sources]);
   const allSourceIds = useMemo(() => collectSourceIds(presentation), [presentation]);
   const visibleSources = useMemo(() => {
@@ -219,11 +227,12 @@ export function AnswerPresentationView({
       </span>
     </p>}
 
-    {(presentation.verdict.kicker || presentation.verdict.text || presentation.verdict.reason) && <div className={`cv-verdict cv-verdict--${presentation.verdict.type}${complex ? "" : " cv-verdict--compact"}`}>
+    {(presentation.verdict.kicker || presentation.verdict.text || presentation.verdict.reason) && <div className={`cv-verdict cv-verdict--${presentation.verdict.type}${complex ? "" : " cv-verdict--compact"}${complex && sortedStatuses.length ? " cv-verdict--with-counts" : ""}`}>
       <span className="cv-verdict__icon"><StatusIcon type={presentation.verdict.type} /></span>
       <div className="cv-verdict__body">
-        {presentation.verdict.kicker && <span className="cv-verdict__kicker">{presentation.verdict.kicker}</span>}
-        {presentation.verdict.text && <p className="cv-verdict__text">{presentation.verdict.text}</p>}
+        {(complex || presentation.verdict.kicker) && <span className="cv-verdict__kicker">{complex ? "Verdict" : presentation.verdict.kicker}</span>}
+        <p className="cv-verdict__text">{complex ? verdictHeadline : presentation.verdict.text}</p>
+        {complex && presentation.verdict.text !== verdictHeadline && <p className="cv-verdict__why">{presentation.verdict.text}</p>}
         {presentation.verdict.reason && <p className="cv-verdict__why">{presentation.verdict.reason}</p>}
       </div>
       {complex && sortedStatuses.length > 0 && <ul className="cv-verdict__counts">
