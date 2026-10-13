@@ -139,7 +139,7 @@
 .cv-callout--watch { background: var(--cv-watch-tint); border: 1px solid var(--cv-watch-line); color: var(--cv-watch-ink); }
 .cv-callout--watch .cv-callout__tag { background: #8A6A00; color: #fff; }
 .cv-callout--next  { background: var(--cv-paper); color: var(--cv-text); }
-.cv-callout--next  .cv-callout__tag { background: var(--cv-midnight); color: var(--cv-paper); }
+.cv-callout--next > .cv-callout__tag { background: var(--cv-midnight); color: var(--cv-paper); }
 .cv-callout--key   { background: var(--cv-white); border: 1px solid var(--cv-line); font-size: var(--cv-fs-body); }
 .cv-callout--path  { background: var(--cv-fixable-tint); color: #1B2A4A; }
 .cv-callout--path  .cv-callout__tag { background: var(--cv-fixable); color: #fff; }
@@ -184,8 +184,8 @@
 
 /* Numbered conditions (short answers) */
 .cv-conditions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--cv-s2); counter-reset: cvcond; }
-.cv-conditions li { counter-increment: cvcond; display: grid; grid-template-columns: 24px 1fr; gap: 10px; }
-.cv-conditions li::before { content: counter(cvcond); width: 24px; height: 24px; border-radius: 50%; background: var(--cv-midnight); color: var(--cv-paper); font-size: 12px; font-weight: 800; display: grid; place-items: center; }
+.cv-conditions > li { counter-increment: cvcond; display: grid; grid-template-columns: 24px 1fr; gap: 10px; }
+.cv-conditions > li::before { content: counter(cvcond); width: 24px; height: 24px; border-radius: 50%; background: var(--cv-midnight); color: var(--cv-paper); font-size: 12px; font-weight: 800; display: grid; place-items: center; }
 
 /* ---------- 11. Timeline ("If it's a no") ---------- */
 .cv-plan { padding: 24px; display: flex; flex-direction: column; gap: 18px; }

@@ -1,0 +1,55 @@
+.panel { max-width: 1480px; padding: 32px; margin: 0 auto; color: #18232d; font-size: 14px; line-height: 1.6; }
+.panel h2 { margin: 0 0 12px; font-size: 20px; font-weight: 600; line-height: 1.3; letter-spacing: -.4px; }
+.panel h3 { font-size: 16px; font-weight: 600; margin: 14px 0 4px; }
+.panel p { margin: 8px 0 16px; }
+.panel button, .panel select, .panel input { font: inherit; }
+.panel button { border: 1px solid #d3dae2; border-radius: 8px; background: #fff; color: #263442; padding: 9px 13px; cursor: pointer; font-weight: 500; }
+.panel button:hover:not(:disabled) { background: #edf3f4; border-color: #80949b; }
+.panel button:disabled { cursor: not-allowed; opacity: .5; }
+.panel :is(button, input, select, a, summary):focus-visible { outline: 3px solid #528391; outline-offset: 3px; }
+.panel .primary { color: #fff; background: #172c37; border-color: #172c37; }
+.panel .primary:hover:not(:disabled) { background: #284651; }
+.panel label { display: flex; flex-direction: column; gap: 6px; margin: 0 0 16px; font-weight: 500; }
+.panel input:not([type="checkbox"]), .panel select { width: 100%; min-width: 0; padding: 10px 12px; border: 1px solid #ccd5de; border-radius: 8px; background: #fff; color: #1f2a36; }
+.panel input[type="file"] { font-size: 13px; }
+.panel fieldset { padding: 0; margin: 0; border: 0; min-width: 0; }
+.panel progress { display: block; width: 100%; margin: 10px 0; accent-color: #2e6876; }
+.panel summary { cursor: pointer; font-weight: 600; }
+.panel details { margin-top: 14px; }
+.panel pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+.panel ul { padding-left: 22px; list-style: disc; }
+.intro { display: flex; justify-content: space-between; align-items: center; gap: 20px; margin-bottom: 24px; }
+.intro h2 { font-size: 30px; margin: 4px 0; }
+.intro p { color: #5b6880; margin-bottom: 0; }
+.eyebrow { font-size: 11px; font-weight: 700; letter-spacing: 1.8px; color: #52727b; }
+.columns { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 24px; }
+.stack { display: grid; gap: 24px; }
+.card { background: #fff; border: 1px solid #e0e5eb; border-radius: 14px; padding: 24px; box-shadow: 0 3px 16px #18232d04; margin-bottom: 24px; min-width: 0; }
+.stack .card { margin-bottom: 0; }
+.stack { margin-bottom: 24px; }
+.cardHeading { display: flex; justify-content: space-between; align-items: start; flex-wrap: wrap; gap: 12px; }
+.cardHeading label { min-width: 200px; font-size: 12px; }
+.badge { border-radius: 5px; padding: 4px 9px; background: #eef3f5; color: #3b5561; font-size: 12px; overflow-wrap: anywhere; }
+.tabs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 24px; }
+.tabs button { flex: 1; font-size: 12px; }
+.tabs button[aria-pressed="true"] { border-color: #315765; background: #edf5f5; color: #203e49; }
+.bounds { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.muted { color: #5b6880; font-size: 12px; }
+.identifier { font-size: 11px; color: #687687; overflow-wrap: anywhere; }
+.panel .check { display: flex; flex-direction: row; align-items: start; gap: 10px; font-size: 13px; }
+.check input { margin-top: 4px; width: 17px; height: 17px; flex-shrink: 0; accent-color: #315765; }
+.warning, .error, .success { padding: 12px 14px; border-radius: 8px; overflow-wrap: anywhere; }
+.warning { background: #fff8e9; border: 1px solid #eddfbd; color: #725521; font-size: 12px; margin-bottom: 16px; }
+.error { background: #fff1f1; color: #8f3030; border: 1px solid #efd0d0; margin: 12px 0; }
+.error p:last-child { margin-bottom: 0; }
+.success { background: #edf7f0; color: #28623f; border: 1px solid #cbe4d3; }
+.pdfLink { display: inline-block; color: #285d72; text-decoration: underline; text-underline-offset: 3px; margin: 14px 0; }
+.tableScroll { overflow-x: auto; }
+.panel table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: left; }
+.panel th { font-weight: 600; color: #617080; background: #f7f9fa; }
+.panel :is(th, td) { padding: 12px; border-bottom: 1px solid #e6ebef; vertical-align: top; }
+.panel td p { max-width: 320px; overflow-wrap: anywhere; }
+.panel td button { font-size: 12px; white-space: nowrap; }
+.agentCounts { display: flex; flex-wrap: wrap; gap: 16px; margin-top: 16px; font-size: 12px; color: #617080; }
+@media (max-width: 1100px) { .columns { grid-template-columns: 1fr; gap: 0; } }
+@media (max-width: 600px) { .panel { padding: 20px 14px; } .card { padding: 18px; } .intro { align-items: start; flex-direction: column; } .intro h2 { font-size: 26px; } .bounds { gap: 10px; } }

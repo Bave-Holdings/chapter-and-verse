@@ -88,7 +88,7 @@ export const authApi = {
 };
 
 export const agentsApi = {
-  list: () => apiRequest<Agent[]>("/agents"),
+  list: (signal?: AbortSignal) => apiRequest<Agent[]>("/agents", { cache: "no-store", signal }),
 };
 
 export const chatsApi = {
