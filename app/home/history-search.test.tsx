@@ -37,6 +37,9 @@ describe("HistorySearch", () => {
     fireEvent(screen.getByRole("dialog"), new Event("cancel", { cancelable: true }));
     fireEvent.click(screen.getByRole("dialog"));
     expect(onClose).toHaveBeenCalledTimes(3);
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "no matches" } });
+    fireEvent.keyDown(screen.getByRole("searchbox"), { key: "Escape" });
+    expect(onClose).toHaveBeenCalledTimes(4);
   });
 
   it("shows loading, empty history, and partial failures without hiding available chats", () => {

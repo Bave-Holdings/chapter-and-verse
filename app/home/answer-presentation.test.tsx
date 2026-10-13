@@ -38,7 +38,119 @@ const presentation: AnswerPresentation = {
   verify_line: "Verify against the current guide.",
 };
 
+function shortAnswer(overrides: Partial<AnswerPresentation> = {}): AnswerPresentation {
+  return {
+    ...presentation,
+    borrower_script: null,
+    statuses: [],
+    steps: [],
+    documents: [],
+    verify_line: null,
+    ...overrides,
+  };
+}
+
 describe("AnswerPresentationView", () => {
+  it("keeps every bullet, stop rule, warning, and citation in a single Next step", () => {
+    const select = vi.fn();
+    const { container } = render(<AnswerPresentationView presentation={shortAnswer({ steps: [{
+      title: "Verify the income",
+      bullets: ["Obtain current paystubs", "Confirm the employment history"],
+      stop_if: "The employment cannot be verified",
+      watch_out: "Do not count unverified overtime",
+      source_ids: [1],
+    }] })} sources={[source]} onCitationSelect={select} />);
+
+    expect(screen.getByRole("article")).toHaveClass("cv-answer--short");
+    const next = within(container.querySelector(".cv-callout--next")!);
+    for (const text of ["Next step", "Verify the income", "Obtain current paystubs", "Confirm the employment history", "Stop if", "The employment cannot be verified", "Watch out", "Do not count unverified overtime"]) {
+      expect(next.getByText(text)).toBeInTheDocument();
+    }
+    expect(container.querySelector(".cv-callout--stop")).toBeInTheDocument();
+    expect(container.querySelector(".cv-callout--watch")).toBeInTheDocument();
+    expect(container.querySelector(".cv-conditions, .cv-progress, .cv-jump, .cv-verdict__counts")).toBeNull();
+    fireEvent.click(next.getByRole("button", { name: "B3-6-02" }));
+    expect(select).toHaveBeenCalledWith(source, [source]);
+  });
+
+  it("preserves all details of multiple short steps in numbered conditions", () => {
+    const steps = [
+      { title: "First action", bullets: ["First requirement", "Second requirement"], stop_if: "First stop rule", watch_out: "First caution", source_ids: [1] },
+      { title: "Second action", bullets: ["Third requirement", "Fourth requirement"], stop_if: "Second stop rule", watch_out: "Second caution", source_ids: [1] },
+    ];
+    const { container } = render(<AnswerPresentationView presentation={shortAnswer({ steps })} sources={[source]} />);
+
+    expect(screen.getByRole("article")).toHaveClass("cv-answer--short");
+    const conditions = container.querySelectorAll(".cv-conditions > li");
+    expect(conditions).toHaveLength(2);
+    steps.forEach((step, index) => {
+      const condition = within(conditions[index] as HTMLElement);
+      for (const text of [step.title, ...step.bullets, step.stop_if, step.watch_out]) {
+        expect(condition.getByText(text)).toBeInTheDocument();
+      }
+      expect(condition.getByRole("button", { name: "B3-6-02" })).toBeInTheDocument();
+    });
+    expect(container.querySelector(".cv-steps, .cv-progress, .cv-callout--next")).toBeNull();
+  });
+
+  it("keeps all alternatives and cautions with their citations in compact callouts", () => {
+    const { container } = render(<AnswerPresentationView presentation={shortAnswer({
+      plan_b: [
+        { when: "Now", title: "Document the gap", bullets: ["Request an explanation", "Verify the dates"], source_ids: [1] },
+        { when: "After verification", title: "Reassess", bullets: ["Use the verified figures"], source_ids: [1] },
+      ],
+      easiest_fix: "Resolve the missing documentation first",
+      donts: [
+        { text: "Do not assume approval", source_ids: [1] },
+        { text: "Do not omit liabilities", source_ids: [1] },
+      ],
+    })} sources={[source]} />);
+
+    expect(screen.getByRole("article")).toHaveClass("cv-answer--short");
+    const plan = within(container.querySelector(".cv-callout--path")!);
+    for (const text of ["If it’s a no", "Document the gap", "Request an explanation", "Verify the dates", "Reassess", "Use the verified figures"]) {
+      expect(plan.getByText(text)).toBeInTheDocument();
+    }
+    expect(plan.getByText(/Now:/)).toBeInTheDocument();
+    expect(plan.getByText(/After verification:/)).toBeInTheDocument();
+    expect(plan.getByText(/Resolve the missing documentation first/)).toBeInTheDocument();
+    expect(plan.getAllByRole("button", { name: "B3-6-02" })).toHaveLength(2);
+    expect(container.querySelectorAll(".cv-callout--watch")).toHaveLength(1);
+    const watch = within(container.querySelector(".cv-callout--watch")!);
+    expect(watch.getByText("Do not assume approval")).toBeInTheDocument();
+    expect(watch.getByText("Do not omit liabilities")).toBeInTheDocument();
+    expect(watch.getAllByRole("button", { name: "B3-6-02" })).toHaveLength(2);
+    expect(container.querySelector(".cv-timeline, .cv-donts")).toBeNull();
+  });
+
+  it("renders a minimal answer without empty sections or a borrower heading", () => {
+    const { container } = render(<AnswerPresentationView presentation={shortAnswer()} sources={[source]} />);
+
+    expect(container.querySelector(".cv-verdict")).toHaveClass("cv-verdict--compact");
+    expect(screen.getByText("Possibly doable")).toBeInTheDocument();
+    expect(screen.getByText("Check the details.")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "B3-6-02" })).toBeInTheDocument();
+    expect(screen.queryByRole("heading")).not.toBeInTheDocument();
+    expect(container.querySelector(".cv-section, .cv-callout, .cv-status, .cv-script, .cv-checklist")).toBeNull();
+  });
+
+  it("does not label a standalone key callout as a borrower script", () => {
+    render(<AnswerPresentationView presentation={shortAnswer({ key_callout: "Confirm the applicable policy first" })} sources={[source]} />);
+    expect(screen.getByText("Confirm the applicable policy first")).toBeInTheDocument();
+    expect(screen.queryByText("Say this to the borrower")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Copy script" })).not.toBeInTheDocument();
+  });
+
+  it("retains the full timeline and don't list for complex answers", () => {
+    const { container } = render(<AnswerPresentationView presentation={{ ...presentation,
+      plan_b: [{ when: "Later", title: "Review again", bullets: ["Confirm the new evidence"], source_ids: [1] }],
+      donts: [{ text: "Do not assume approval", source_ids: [1] }],
+    }} sources={[source]} />);
+    expect(screen.getByRole("article")).not.toHaveClass("cv-answer--short");
+    expect(within(container.querySelector(".cv-timeline")!).getByText("Confirm the new evidence")).toBeInTheDocument();
+    expect(within(container.querySelector(".cv-donts")!).getByText("Do not assume approval")).toBeInTheDocument();
+  });
+
   it("keeps document selection separate from opening its compact citation", () => {
     const select = vi.fn();
     const change = vi.fn();

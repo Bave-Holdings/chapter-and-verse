@@ -163,6 +163,7 @@ type WorkspaceProps = {
   initialChatId?: string;
   categoryMode?: boolean;
   profile?: boolean;
+  admin?: boolean;
   children?: React.ReactNode;
 };
 
@@ -170,7 +171,7 @@ export function WorkspaceLoading() {
   return <main className={styles.loadingScreen} aria-busy="true">Loading your workspace…</main>;
 }
 
-export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", initialChatId, categoryMode = false, profile = false, children }: WorkspaceProps) {
+export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", initialChatId, categoryMode = false, profile = false, admin = false, children }: WorkspaceProps) {
   const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [agents, setAgents] = useState<Agent[]>([]);
@@ -757,7 +758,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
 
   function navigation(mobile = false) {
     const agentButton = (agent: Agent) => {
-      const active = agent.key === agentKey;
+      const active = !admin && agent.key === agentKey;
       return <button
         key={agent.key}
         type="button"
@@ -781,19 +782,20 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
       </Link>
       <button type="button" className={styles.newQuestion} aria-label="New Question" onClick={() => {
         setDrawerOpen(false);
-        if (profile) router.push("/home");
+        if (profile || admin) router.push("/home");
         else newChat();
       }}><span aria-hidden="true">+</span><span>New Question</span></button>
       <nav className={styles.navigation} aria-label="Knowledge agents">
         <p>WORKSPACE</p>
-        <Link href="/home" className={styles.allLibraries} aria-label="All Libraries" aria-current={!profile && !hasCategoryContext && !showConversation ? "page" : undefined} onClick={() => setDrawerOpen(false)}><Icon name="grid" /><span>All Libraries</span></Link>
+        <Link href="/home" className={styles.allLibraries} aria-label="All Libraries" aria-current={!profile && !admin && !hasCategoryContext && !showConversation ? "page" : undefined} onClick={() => setDrawerOpen(false)}><Icon name="grid" /><span>All Libraries</span></Link>
+        {user?.role === "admin" && <Link href="/admin/ingest" className={styles.allLibraries} aria-current={admin ? "page" : undefined} onClick={() => setDrawerOpen(false)}><Icon name="shield" /><span>Ingestion admin</span></Link>}
         {mortgageAgents.length > 0 && <div className={styles.mortgageGroup}>
           <button
             type="button"
-            className={`${styles.mortgageParent} ${mortgageSelected ? styles.activeCategory : ""}`}
+            className={`${styles.mortgageParent} ${mortgageSelected && !admin ? styles.activeCategory : ""}`}
             aria-label="Mortgage"
-            aria-pressed={mortgageSelected}
-            data-active={mortgageSelected}
+            aria-pressed={mortgageSelected && !admin}
+            data-active={mortgageSelected && !admin}
             disabled={streaming || !mortgageAgents.some((agent) => agent.live)}
             onClick={() => {
               const agent = mortgageSelected && selectedAgent?.live ? selectedAgent : mortgageAgents.find((agent) => agent.live);
@@ -837,7 +839,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
   if (loading || (agents.length > 0 && !agentKey)) return <WorkspaceLoading />;
 
   return (
-    <div className={`${styles.workspace} ${showConversation ? styles.chatMode : ""} ${categoryMode ? styles.categoryMode : ""} ${profile ? styles.profileMode : ""} ${citationPanel ? styles.citationOpen : ""}`}>
+    <div className={`${styles.workspace} ${showConversation && !admin ? styles.chatMode : ""} ${categoryMode ? styles.categoryMode : ""} ${profile || admin ? styles.profileMode : ""} ${citationPanel && !admin ? styles.citationOpen : ""}`}>
       <a className={styles.skipLink} href="#knowledge-content">Skip to content</a>
       <aside className={styles.sidebar} aria-label="Main navigation">
         {navigation()}
@@ -847,10 +849,10 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
       </dialog>
 
       <header className={styles.header}>
-        <div className={`${styles.headerLead} ${!profile ? styles.screenReaderOnly : ""}`}>
-          <div className={styles.greeting}>{profile ? <h1>My Profile</h1> : <><span>{headerLabel}</span><h1>{headerTitle}</h1></>}</div>
+        <div className={`${styles.headerLead} ${!profile && !admin ? styles.screenReaderOnly : ""}`}>
+          <div className={styles.greeting}>{admin ? <h1>Ingestion admin</h1> : profile ? <h1>My Profile</h1> : <><span>{headerLabel}</span><h1>{headerTitle}</h1></>}</div>
         </div>
-        {!profile && <div className={styles.conversationToolbar}>
+        {!profile && !admin && <div className={styles.conversationToolbar}>
           {(hasCategoryContext || showConversation) && <div className={styles.scopePicker} ref={scopePicker}>
             <button
               ref={scopeButton}
@@ -909,7 +911,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
         </div>}
         <div className={styles.mobileBrand}>
           <button ref={menuButton} className={styles.menuButton} aria-label="Open navigation" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(true)}><Icon name="menu" /></button>
-          {profile ? <h1>My Profile</h1> : <Link href="/home" className={styles.mobileHeaderCopy}><Image src="/chapter-verse-mark.svg" alt="Chapter and Verse home" width={38} height={40} /><span className={styles.screenReaderOnly}><small>{headerLabel}</small><strong>{headerTitle}</strong></span></Link>}
+          {admin ? <h1>Ingestion admin</h1> : profile ? <h1>My Profile</h1> : <Link href="/home" className={styles.mobileHeaderCopy}><Image src="/chapter-verse-mark.svg" alt="Chapter and Verse home" width={38} height={40} /><span className={styles.screenReaderOnly}><small>{headerLabel}</small><strong>{headerTitle}</strong></span></Link>}
         </div>
         <div className={styles.headerActions} ref={headerActions}>
           <button className={styles.notificationButton} aria-label="Notifications unavailable" aria-expanded={popover === "notifications"} onClick={() => setPopover(popover === "notifications" ? null : "notifications")}><span><Icon name="bell" /></span></button>
@@ -922,7 +924,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
         </div>
       </header>
 
-      {profile ? <main className={styles.profileMain} id="knowledge-content">{children}</main> : <main className={`${styles.main} ${citationPanel ? styles.mainWithCitation : ""}`} id="knowledge-content">
+      {admin ? <main className={styles.profileMain} id="knowledge-content">{children}</main> : profile ? <main className={styles.profileMain} id="knowledge-content">{children}</main> : <main className={`${styles.main} ${citationPanel ? styles.mainWithCitation : ""}`} id="knowledge-content">
         <section className={styles.center} aria-label={`${selectedAgentName} workspace`}>
           {showConversation ? <div className={styles.conversation} ref={conversation} role="log" aria-label="Conversation" aria-live="polite">
             {loadingChat && <p className={styles.emptyState}>Loading conversation…</p>}

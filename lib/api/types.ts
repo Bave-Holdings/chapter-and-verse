@@ -6,6 +6,47 @@ export type User = {
   created_at: string;
 };
 
+export type IngestRangeResponse = {
+  job_id: string;
+  document_id: string;
+  document_name: string;
+  from_page: number;
+  to_page: number;
+  status: string;
+};
+
+export type DocumentIngest = {
+  id: string;
+  document_id: string;
+  start_page: number;
+  end_page: number;
+  status: string;
+  pages: number;
+  section_pages: number;
+  section_pages_total: number;
+  chunks: number;
+  sections: number;
+  error: string | null;
+  created_at: string;
+  updated_at: string;
+  document_name: string | null;
+};
+
+export type GuidelineDocument = {
+  id: string;
+  name: string;
+  source_path: string;
+  page_count: number;
+  total_pages: number;
+  content_start_page: number;
+  status: string;
+  agent_key: string;
+  document_family: string;
+  section_profile_version: string;
+  version: string;
+  created_at: string;
+};
+
 export type Agent = {
   key: string;
   slug: string;

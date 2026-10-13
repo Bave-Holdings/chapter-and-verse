@@ -59,6 +59,10 @@ export function HistorySearch({ chats, loading, error, disabled, activeChatId, o
     ref={dialog}
     className={styles.dialog}
     aria-label="Search chat history"
+    onKeyDown={(event) => {
+      // A search input can consume Escape before the native dialog cancel event.
+      if (event.key === "Escape") { event.preventDefault(); onClose(); }
+    }}
     onCancel={(event) => { event.preventDefault(); onClose(); }}
     onClose={(event) => { if (!event.currentTarget.open) onClose(); }}
     onClick={(event) => { if (event.target === event.currentTarget) onClose(); }}

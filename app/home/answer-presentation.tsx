@@ -104,6 +104,18 @@ function Bullets({ items }: { items: string[] }) {
   return <ul className="cv-bullets">{bullets.map((item, index) => <li key={index}><span>{item}</span></li>)}</ul>;
 }
 
+function StepDetails({ step, citationProps }: {
+  step: AnswerPresentation["steps"][number];
+  citationProps: Omit<CitationProps, "source_ids">;
+}) {
+  return <>
+    <Bullets items={step.bullets} />
+    {step.stop_if && <div className="cv-callout cv-callout--stop"><span className="cv-callout__tag">Stop if</span><span>{step.stop_if}</span></div>}
+    {step.watch_out && <div className="cv-callout cv-callout--watch"><span className="cv-callout__tag">Watch out</span><span>{step.watch_out}</span></div>}
+    <Citations {...citationProps} source_ids={step.source_ids} />
+  </>;
+}
+
 export function AnswerPresentationView({
   presentation,
   sources,
@@ -226,7 +238,7 @@ export function AnswerPresentationView({
     </nav>}
 
     {(presentation.borrower_script || presentation.key_callout) && <section className="cv-section" id={`${anchorPrefix}-say`}>
-      <h3 className="cv-section__title">Say this to the borrower</h3>
+      {presentation.borrower_script && <h3 className="cv-section__title">Say this to the borrower</h3>}
       {presentation.borrower_script && <div className="cv-script">
         <blockquote>{presentation.borrower_script}</blockquote>
         <div><button className="cv-btn cv-btn--primary" type="button" onClick={() => void copyText(presentation.borrower_script!, "script")}>{copied === "script" ? "Copied" : "Copy script"}</button></div>
@@ -254,16 +266,24 @@ export function AnswerPresentationView({
         return <li key={id} className={`cv-step${index === presentation.steps.length - 1 ? " cv-step--final" : ""}${isDone ? " is-done" : ""}`} data-cv-step={id}>
           <div className="cv-step__body">
             <div className="cv-step__head"><h4 className="cv-step__title">{step.title}</h4><label className="cv-done"><input type="checkbox" checked={isDone} onChange={() => toggleStep(id)} />Done</label></div>
-            <Bullets items={step.bullets} />
-            {step.stop_if && <div className="cv-callout cv-callout--stop"><span className="cv-callout__tag">Stop if</span><span>{step.stop_if}</span></div>}
-            {step.watch_out && <div className="cv-callout cv-callout--watch"><span className="cv-callout__tag">Watch out</span><span>{step.watch_out}</span></div>}
-            <Citations {...citationProps} source_ids={step.source_ids} />
+            <StepDetails step={step} citationProps={citationProps} />
           </div>
         </li>;
       })}</ol>
-    </section> : <ol className="cv-conditions">{presentation.steps.map((step, index) => <li key={`short-step-${index}`}><span><strong>{step.title}.</strong> {step.bullets.find(Boolean) || step.watch_out || step.stop_if}<Citations {...citationProps} source_ids={step.source_ids} inline /></span></li>)}</ol>)}
+    </section> : presentation.steps.length === 1 ? <div className="cv-callout cv-callout--next">
+      <span className="cv-callout__tag">Next step</span>
+      <div className="cv-step__body">
+        <strong>{presentation.steps[0].title}</strong>
+        <StepDetails step={presentation.steps[0]} citationProps={citationProps} />
+      </div>
+    </div> : <ol className="cv-conditions">{presentation.steps.map((step, index) => <li key={`short-step-${index}`}>
+      <div className="cv-step__body">
+        <strong>{step.title}</strong>
+        <StepDetails step={step} citationProps={citationProps} />
+      </div>
+    </li>)}</ol>)}
 
-    {(presentation.plan_b.length > 0 || presentation.easiest_fix) && <section className="cv-section" id={`${anchorPrefix}-plan`}>
+    {(presentation.plan_b.length > 0 || presentation.easiest_fix) && (complex ? <section className="cv-section" id={`${anchorPrefix}-plan`}>
       <h3 className="cv-section__title">If it’s a no: how we get to yes</h3>
       <div className="cv-card cv-plan">
         {presentation.plan_b.length > 0 && <ol className="cv-timeline">{presentation.plan_b.map((item, index) => <li key={`${item.when}-${item.title}-${index}`}>
@@ -272,12 +292,27 @@ export function AnswerPresentationView({
         </li>)}</ol>}
         {presentation.easiest_fix && <div className="cv-callout cv-callout--path"><span className="cv-callout__tag">Easiest fix</span><span>{presentation.easiest_fix}</span></div>}
       </div>
-    </section>}
+    </section> : <div className="cv-callout cv-callout--path" id={`${anchorPrefix}-plan`}>
+      <span className="cv-callout__tag">If it’s a no</span>
+      <div className="cv-step__body">
+        {presentation.plan_b.map((item, index) => <div className="cv-step__body" key={`short-plan-${index}`}>
+          <span>{item.when}: <strong>{item.title}</strong></span>
+          <Bullets items={item.bullets} />
+          <Citations {...citationProps} source_ids={item.source_ids} />
+        </div>)}
+        {presentation.easiest_fix && <span><strong>Easiest fix: </strong>{presentation.easiest_fix}</span>}
+      </div>
+    </div>)}
 
-    {presentation.donts.length > 0 && <section className="cv-section" id={`${anchorPrefix}-dont`}>
+    {presentation.donts.length > 0 && (complex ? <section className="cv-section" id={`${anchorPrefix}-dont`}>
       <h3 className="cv-section__title">Don’t</h3>
       <ul className="cv-donts cv-card">{presentation.donts.map((item, index) => <li key={`${item.text}-${index}`}><span>{item.text}<Citations {...citationProps} source_ids={item.source_ids} inline /></span></li>)}</ul>
-    </section>}
+    </section> : <div className="cv-callout cv-callout--watch">
+      <span className="cv-callout__tag">Watch out</span>
+      <div className="cv-step__body">{presentation.donts.map((item, index) => <span key={`short-dont-${index}`}>
+        {item.text}<Citations {...citationProps} source_ids={item.source_ids} inline />
+      </span>)}</div>
+    </div>)}
 
     {presentation.documents.length > 0 && <section className="cv-section" id={`${anchorPrefix}-docs`}>
       <h3 className="cv-section__title">Get these</h3>
