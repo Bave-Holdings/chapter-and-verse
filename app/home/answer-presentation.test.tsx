@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { AnswerPresentation, CitationSource } from "../../lib/api";
 import { AnswerPresentationView } from "./answer-presentation";
@@ -51,6 +51,57 @@ function shortAnswer(overrides: Partial<AnswerPresentation> = {}): AnswerPresent
 }
 
 describe("AnswerPresentationView", () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("uses the full scenario layout with a short headline even with only a script and documents", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    vi.stubGlobal("navigator", Object.create(navigator, { clipboard: { value: { writeText } } }));
+    const conclusion = "The funds can be used if the lender documents the donor and transfer.";
+    const script = "We can consider the gift once its source and transfer are documented.";
+    const { container } = render(<AnswerPresentationView presentation={shortAnswer({
+      answer_kind: "borrower_scenario",
+      verdict: { ...presentation.verdict, text: conclusion },
+      borrower_script: script,
+      documents: [{ label: "Signed gift letter", source_ids: [1] }],
+    })} sources={[source]} />);
+
+    expect(screen.getByRole("article")).not.toHaveClass("cv-answer--short");
+    expect(container.querySelector(".cv-verdict")).not.toHaveClass("cv-verdict--compact");
+    expect(container.querySelector(".cv-verdict__text")).toHaveTextContent("Possibly doable");
+    expect(screen.getByText(conclusion)).toHaveClass("cv-verdict__why");
+    expect(screen.getByText("Check the details.")).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Say this to the borrower" })).toBeInTheDocument();
+    expect(screen.getByRole("checkbox", { name: "Signed gift letter" })).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Copy script" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument());
+    expect(writeText).toHaveBeenCalledWith(script);
+    expect(container.querySelector(".cv-timeline, .cv-donts, .cv-status, .cv-steps")).toBeNull();
+  });
+
+  it("shows component findings and actions in full scenario sections below the conditional verdict", () => {
+    const { container } = render(<AnswerPresentationView presentation={shortAnswer({
+      answer_kind: "borrower_scenario",
+      borrower_script: "The gift needs documentation before it can be used.",
+      statuses: [{ type: "fixable", item: "Gift documentation", reason: "A signed letter is needed.", source_ids: [1] }],
+      steps: [{ title: "Document the gift", bullets: ["Obtain the signed letter"], stop_if: null, watch_out: null, source_ids: [1] }],
+    })} sources={[source]} />);
+    expect(screen.getByRole("heading", { name: "Where you stand" })).toBeInTheDocument();
+    expect(screen.getByText("1 fixable")).toBeInTheDocument();
+    expect(container.querySelector(".cv-verdict")).toHaveClass("cv-verdict--fixable", "cv-verdict--with-counts");
+    expect(within(container.querySelector(".cv-steps")!).getByText("Obtain the signed letter")).toBeInTheDocument();
+    expect(container.querySelector(".cv-progress")).toBeInTheDocument();
+  });
+
+  it("keeps a general policy answer compact with its direct answer as the headline", () => {
+    const directAnswer = "Yes, with documented gift funds.";
+    const { container } = render(<AnswerPresentationView presentation={shortAnswer({
+      answer_kind: "simple", verdict: { ...presentation.verdict, text: directAnswer },
+    })} sources={[source]} />);
+    expect(screen.getByRole("article")).toHaveClass("cv-answer--short");
+    expect(container.querySelector(".cv-verdict__text")).toHaveTextContent(directAnswer);
+    expect(screen.queryByRole("button", { name: "Copy script" })).not.toBeInTheDocument();
+  });
+
   it("keeps every bullet, stop rule, warning, and citation in a single Next step", () => {
     const select = vi.fn();
     const { container } = render(<AnswerPresentationView presentation={shortAnswer({ steps: [{

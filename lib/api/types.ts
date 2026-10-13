@@ -88,6 +88,7 @@ export type SourceIds = {
 };
 
 export type AnswerPresentation = {
+  answer_kind?: "simple" | "borrower_scenario" | null;
   scope: {
     label: string;
     detail: string;
