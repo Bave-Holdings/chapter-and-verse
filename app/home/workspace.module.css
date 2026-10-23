@@ -95,6 +95,15 @@
 .composer button { display: grid; flex-shrink: 0; place-items: center; width: 40px; height: 40px; margin-right: 11px; border: 0; border-radius: 10px; background: #16cf91; color: #04121b; }
 .composer button svg { width: 19px; height: 19px; }
 .status { margin: 8px 3px; color: var(--muted); font-size: 12px; line-height: 1.4; }
+.ausPicker { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; margin: 0 0 10px; padding: 0; border: 0; }
+.ausPicker legend { float: left; margin-right: 6px; color: #5b6671; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.ausPicker label { position: relative; display: inline-flex; cursor: pointer; }
+.ausPicker input { position: absolute; inset: 0; margin: 0; opacity: 0; cursor: pointer; }
+.ausPicker span { display: inline-flex; min-height: 30px; align-items: center; padding: 0 11px; border: 1px solid #dfe2e8; border-radius: 999px; background: #fff; color: #3b4252; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.ausPicker input:checked + span { border-color: #2f6bdb; background: #ebf2ff; color: #1e4fae; }
+.ausPicker input:focus-visible + span { outline: 3px solid #2f6bdb; outline-offset: 2px; }
+.ausPicker:disabled label { cursor: not-allowed; opacity: .6; }
+.ausTag { margin-right: auto; padding: 2px 8px; border-radius: 999px; background: #ebf2ff; color: #1e4fae; font-size: 11px; font-weight: 600; }
 .disabledReason { margin: 8px 3px 0; color: #7a6250; font-size: 12px; }
 .questions { padding: 24px 32px; overflow-y: auto; background: #fff; }
 .questionsHeading > span { display: block; font-size: 14px; line-height: 20px; color: #737373; }
@@ -144,6 +153,16 @@
 .sourceList button[data-source-kind="overlay"] { border-color: #ffb343; background: #fff9ef; }
 .sourceList button[data-source-kind="overlay"]::before { background: #ffb343; }
 .sourceList button[data-source-kind="overlay"] strong { color: #a76b19; }
+.sourceList button[data-source-kind="practice"] { border-color: #b9c3d6; background: #eef1f6; }
+.sourceList button[data-source-kind="practice"]::before { background: #5b6b8c; }
+.sourceList button[data-source-kind="practice"] strong { color: #39445c; }
+.sourceList button[data-source-kind="comparison"] { border-color: #9fbbef; background: #ebf2ff; }
+.sourceList button[data-source-kind="comparison"]::before { background: #2f6bdb; }
+.sourceList button[data-source-kind="comparison"] strong { color: #1e4fae; }
+.sourceList button[data-source-kind="calculation"] { border-color: #d5d9e1; background: #f7f8fa; }
+.sourceList button[data-source-kind="calculation"]::before { background: #0b0f19; }
+.sourceList button[data-source-kind="calculation"] strong { color: #0b0f19; }
+.sourceList button small { flex-shrink: 0; color: inherit; font-size: 11px; font-weight: 700; }
 .sourceList button strong { min-width: 0; color: #168361; font-weight: 400; overflow-wrap: anywhere; }
 .sourceList button span { color: #78827f; }
 .sourceList .highlightedSource { border-color: #24bca7; background: #eafbf7; }
@@ -199,6 +218,20 @@
 .citationExcerptOverlay { border-color: #efa43e; background: #fff6e8; }
 .citationExcerptOverlay h3 { color: #a8610e; }
 .citationExcerptOverlay > div + div { border-top-color: #f0d5ae; }
+.citationTabs .practiceCitationTab > span:first-child { background: #5b6b8c; }
+.citationTabs .comparisonCitationTab > span:first-child { background: #2f6bdb; }
+.citationTabs .calculationCitationTab > span:first-child { background: #0b0f19; }
+.citationKindNote { margin: 18px 0 0; padding: 10px 12px; border-radius: 8px; background: #f4f6f9; color: #3b4252; font-size: 13px; line-height: 19px; }
+.citationExcerptPractice { border-color: #b9c3d6; background: #eef1f6; }
+.citationExcerptPractice h3 { color: #39445c; }
+.citationExcerptPractice > div + div { border-top-color: #d3d9e5; }
+.citationExcerptComparison { border-color: #9fbbef; background: #ebf2ff; }
+.citationExcerptComparison h3 { color: #1e4fae; }
+.citationExcerptComparison > div + div { border-top-color: #c9d8f5; }
+.citationExcerptCalculation { border-color: #d5d9e1; background: #f7f8fa; }
+.citationExcerptCalculation h3 { color: #0b0f19; }
+.citationExcerptCalculation p { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: 13px; }
+.citationActions.citationActionsNoPdf { grid-template-columns: minmax(0, 1fr); }
 .citationActions { display: grid; grid-template-columns: minmax(0, 1fr) 42px; gap: 10px; flex-shrink: 0; padding: 18px 20px max(18px, env(safe-area-inset-bottom)); border-top: 1px solid #e5e9eb; background: #fff; }
 .citationActions > button { display: flex; width: 100%; min-height: 46px; padding: 0 18px; align-items: center; justify-content: center; gap: 9px; border: 0; border-radius: 11px; background: #1ed095; color: #05261c; font-weight: 700; }
 .citationActions > button:hover:not(:disabled) { background: #18bd87; }
@@ -374,6 +407,12 @@
 .navigation .allLibraries { display: flex; min-height: 48px; align-items: center; gap: 10px; padding: 0 12px; border-radius: 8px; background: #0d2627; color: #eef5f3; font-size: 14px; }
 .allLibraries svg { color: #16cf91; }
 .navigation .allLibraries:hover { background: #123737; }
+.navigation .workspaceToggle { height: 28px; margin: 0 0 4px; padding: 0 4px; border-radius: 6px; color: #667084; font-size: 11px; line-height: 16px; letter-spacing: .02em; }
+.navigation .workspaceToggle:hover { background: #ffffff0a; color: #a5afc1; }
+.navigation .workspaceToggle > svg:last-child { width: 16px; height: 16px; color: inherit; transform: none; transition: transform 160ms ease; }
+.navigation .workspaceToggle[aria-expanded="false"] > svg:last-child { transform: rotate(-90deg); }
+.workspaceLinks[hidden] { display: none; }
+@media (prefers-reduced-motion: reduce) { .navigation .workspaceToggle > svg:last-child { transition: none; } }
 .recentChats { display: flex; min-height: 80px; flex: 1; flex-direction: column; margin: 22px 0 20px; overflow: hidden; }
 .recentChats h2 { margin: 0 0 12px; font-size: 12px; line-height: 18px; font-weight: 400; }
 .recentChats button { display: block; width: 100%; min-height: 32px; padding: 7px 8px; overflow: hidden; border: 0; border-radius: 2px; background: transparent; color: #7c879c; font-size: 12px; text-align: left; text-overflow: ellipsis; white-space: nowrap; }
@@ -499,4 +538,10 @@
   .composer input { padding-inline: 14px; font-size: 16px; }
   .composer button { width: 38px; height: 38px; margin-right: 10px; border-radius: 12px; }
   .composerNote { font-size: 11px; line-height: 17px; }
+}
+@media (max-width: 767px) {
+  .ausPicker { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; }
+  .ausPicker legend { flex-shrink: 0; }
+  .ausPicker label { flex-shrink: 0; }
+  .ausPicker span { min-height: 28px; padding: 0 9px; }
 }

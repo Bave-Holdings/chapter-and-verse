@@ -99,4 +99,33 @@ describe("CitationPanel", () => {
     expect(select).toHaveBeenCalledWith(sources[1]);
     expect(screen.getByRole("tab", { name: "Credit Policy 4.2" })).toHaveFocus();
   });
+
+  it("shows a playbook source's own text instead of a PDF page", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const practice: CitationSource = {
+      index: 3, document_id: "playbook", doc_name: "Intellence Underwriter Playbook (FHA)", page_number: 0,
+      section_id: "Employment gaps", sub_section_id: null, citation_url: "", kind: "practice",
+      text_preview: "Underwriters ask for a letter for any gap over 30 days.", cited_passages: [],
+    };
+    render(<CitationPanel source={practice} sources={[practice]} agentName="FHA Handbook 4000.1" onSelect={vi.fn()} onClose={vi.fn()} />);
+    const panel = screen.getByRole("complementary", { name: "Citation details" });
+
+    expect(panel).toHaveTextContent("Underwriter practice · FHA Handbook 4000.1");
+    expect(panel).toHaveTextContent("Underwriter practice, not agency policy.");
+    expect(within(panel).getByText("Underwriters ask for a letter for any gap over 30 days.")).toBeInTheDocument();
+    expect(within(panel).queryByText("Page")).not.toBeInTheDocument();
+    expect(within(panel).queryByRole("button", { name: "Open at page" })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Copy citation" }));
+    await screen.findByRole("status");
+    expect(writeText).toHaveBeenCalledWith("Intellence Underwriter Playbook (FHA) — Employment gaps");
+  });
+
+  it("labels a conventional comparison and keeps its PDF page", () => {
+    const comparison: CitationSource = { ...sources[0], index: 4, doc_name: "Fannie Mae Selling Guide.pdf", section_id: "B3-3.2-02", sub_section_id: null, kind: "comparison" };
+    render(<CitationPanel source={comparison} sources={[comparison]} agentName="FHA Handbook 4000.1" onSelect={vi.fn()} onClose={vi.fn()} />);
+    expect(screen.getByRole("complementary")).toHaveTextContent("Conventional comparison · FHA Handbook 4000.1");
+    expect(screen.getByRole("complementary")).toHaveTextContent("never changes this program's outlook");
+    expect(screen.getByRole("button", { name: "Open at page" })).toBeEnabled();
+  });
 });

@@ -7,6 +7,7 @@ import remarkGfm from "remark-gfm";
 import type { CitationSource } from "../../lib/api";
 import { MessageLink } from "../_components/message-link";
 import { citationLabel } from "./citation-label";
+import { SOURCE_KIND_LABELS, sourceKind } from "./source-kind";
 import styles from "./workspace.module.css";
 
 type MarkdownMessageProps = {
@@ -65,12 +66,13 @@ export function MarkdownMessage({ content, sources, onCitationSelect }: Markdown
             <button
               type="button"
               data-source-index={source.index}
-              data-source-kind={source.source_kind}
+              data-source-kind={sourceKind(source)}
               key={`${source.index}-${source.document_id}-${source.page_number}`}
               className={highlighted === source.index ? styles.highlightedSource : undefined}
               aria-pressed={highlighted === source.index}
               onClick={() => citation(source.index)}
             >
+              {sourceKind(source) !== "guideline" && <small>{SOURCE_KIND_LABELS[sourceKind(source)]}</small>}
               <strong>{citationLabel(source)}</strong>
             </button>
           ))}

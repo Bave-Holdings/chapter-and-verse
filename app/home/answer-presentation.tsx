@@ -2,12 +2,15 @@
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { citationLabel } from "./citation-label";
+import { SOURCE_KIND_LABELS, sourceKind } from "./source-kind";
 
 import type {
   AnswerPresentation,
   AnswerUiState,
+  Chip,
   CitationSource,
   SourceIds,
+  SourceKind,
 } from "../../lib/api";
 
 type AnswerPresentationProps = {
@@ -32,13 +35,58 @@ const statusOrder = {
   blocker: 2,
 } as const;
 
-function StatusIcon({ type }: { type: "clear" | "fixable" | "blocker" | "notfound" }) {
+type LegacyStatus = keyof typeof statusOrder;
+
+/** Eligibility Breakdown chips, worst first; the outlook is the worst chip. */
+const CHIP_ORDER: Chip[] = ["ineligible", "not_yet", "open", "discretion", "condition", "met"];
+
+const CHIP_LABELS: Record<Chip, string> = {
+  ineligible: "Ineligible",
+  not_yet: "Not yet",
+  open: "Open",
+  discretion: "Discretion",
+  condition: "Condition",
+  met: "Met",
+};
+
+// Kept in step with the backend's mapping for answers that arrive without a legacy type.
+const LEGACY_TYPE: Record<Chip, LegacyStatus> = {
+  met: "clear",
+  condition: "fixable",
+  open: "fixable",
+  discretion: "fixable",
+  not_yet: "blocker",
+  ineligible: "blocker",
+};
+
+// Guideline citations first and lender overlays last, as before the source kinds.
+const KIND_ORDER: Record<SourceKind, number> = {
+  guideline: 0,
+  comparison: 1,
+  calculation: 2,
+  practice: 3,
+  overlay: 4,
+};
+
+type IconType = LegacyStatus | "notfound" | Chip;
+
+function StatusIcon({ type }: { type: IconType }) {
   return <svg viewBox="0 0 24 24" aria-hidden="true">
-    {type === "clear" && <path d="M5 12l5 5 9-10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />}
+    {(type === "clear" || type === "met") && <path d="M5 12l5 5 9-10" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" />}
     {type === "fixable" && <path d="M14.7 6.3a4 4 0 0 0-5.4 5.4L4 17l3 3 5.3-5.3a4 4 0 0 0 5.4-5.4l-2.5 2.5-2.5-2.5z" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />}
-    {type === "blocker" && <><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2.4" /><path d="M6.5 6.5l11 11" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></>}
+    {(type === "blocker" || type === "ineligible") && <><circle cx="12" cy="12" r="8" fill="none" stroke="currentColor" strokeWidth="2.4" /><path d="M6.5 6.5l11 11" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></>}
     {type === "notfound" && <><circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" strokeWidth="2.4" /><path d="M21 21l-4.3-4.3" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" /></>}
+    {type === "condition" && <><rect x="6" y="4" width="12" height="17" rx="2" fill="none" stroke="currentColor" strokeWidth="2.2" /><path d="M9 4.5V3h6v1.5M9 11h6M9 15h4" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /></>}
+    {type === "open" && <><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.2" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.5 2.3c-.7.3-1 .9-1 1.6v.6" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" /><circle cx="12" cy="17.2" r="1.2" fill="currentColor" /></>}
+    {type === "discretion" && <path d="M12 4v16M7 20h10M5 8h14M5 8l-3 6a3 3 0 0 0 6 0zM19 8l-3 6a3 3 0 0 0 6 0z" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />}
+    {type === "not_yet" && <><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" strokeWidth="2.2" /><path d="M12 7v5l3.5 2" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" /></>}
   </svg>;
+}
+
+type StatusItem = AnswerPresentation["statuses"][number];
+
+function legacyType(item: StatusItem): LegacyStatus {
+  return item.type ?? (item.chip ? LEGACY_TYPE[item.chip] : "fixable");
 }
 
 function uniqueSourceIds(ids: number[]) {
@@ -59,7 +107,9 @@ function collectSourceIds(value: unknown, output: number[] = []): number[] {
 }
 
 function fullSourceLabel(source: CitationSource) {
+  const kind = sourceKind(source);
   const parts = [
+    kind === "guideline" ? null : SOURCE_KIND_LABELS[kind],
     source.sub_section_id || source.section_id || source.title,
     source.doc_name,
     source.page_number ? `p. ${source.page_number}` : null,
@@ -78,24 +128,27 @@ function Citations({ source_ids, byIndex, selectedSource, onSelect, inline = fal
   const matched = uniqueSourceIds(source_ids)
     .map((id) => byIndex.get(id))
     .filter((source): source is CitationSource => Boolean(source))
-    .sort((a, b) => {
-      const aOverlay = a.source_kind === "overlay" ? 1 : 0;
-      const bOverlay = b.source_kind === "overlay" ? 1 : 0;
-      return aOverlay - bOverlay || a.index - b.index;
-    });
+    .sort((a, b) => KIND_ORDER[sourceKind(a)] - KIND_ORDER[sourceKind(b)] || a.index - b.index);
 
   if (!matched.length) return null;
   const Wrapper = inline ? "span" : "div";
   return <Wrapper className={`cv-cites${inline ? " cv-cites--inline" : ""}`}>
-    {matched.map((source) => <button
-      key={source.index}
-      type="button"
-      className={`cv-cite cv-cite--${source.source_kind === "overlay" ? "overlay" : "source"}`}
-      aria-pressed={selectedSource === source.index}
-      title={fullSourceLabel(source)}
-      onClick={() => onSelect(source)}
-    ><span className="cv-cite__label">{citationLabel(source)}</span></button>)}
+    {matched.map((source) => {
+      const kind = sourceKind(source);
+      return <button
+        key={source.index}
+        type="button"
+        className={`cv-cite cv-cite--${kind === "guideline" ? "source" : `${kind} cv-cite--labeled`}`}
+        aria-pressed={selectedSource === source.index}
+        title={fullSourceLabel(source)}
+        onClick={() => onSelect(source)}
+      >{kind !== "guideline" && <span className="cv-cite__kind">{SOURCE_KIND_LABELS[kind]}</span>}<span className="cv-cite__label">{citationLabel(source)}</span></button>;
+    })}
   </Wrapper>;
+}
+
+function ChipBadge({ chip }: { chip: Chip }) {
+  return <span className={`cv-badge cv-chip cv-chip--${chip}`}><StatusIcon type={chip} />{CHIP_LABELS[chip]}</span>;
 }
 
 function Bullets({ items }: { items: string[] }) {
@@ -134,13 +187,24 @@ export function AnswerPresentationView({
     if (copyTimer.current) clearTimeout(copyTimer.current);
   }, []);
 
+  const outlook = presentation.outlook ?? null;
+  // Chipped answers list the worst item first, matching the outlook above them.
+  // Saved answers keep their original best-first legacy order.
+  const chipped = presentation.statuses.some((item) => item.chip);
   const sortedStatuses = useMemo(() => presentation.statuses
     .slice()
-    .sort((a, b) => statusOrder[a.type] - statusOrder[b.type]), [presentation.statuses]);
+    .sort((a, b) => chipped
+      ? CHIP_ORDER.indexOf(a.chip ?? "condition") - CHIP_ORDER.indexOf(b.chip ?? "condition")
+      : statusOrder[legacyType(a)] - statusOrder[legacyType(b)]), [chipped, presentation.statuses]);
   const counts = sortedStatuses.reduce((result, item) => {
-    result[item.type] += 1;
+    result[legacyType(item)] += 1;
     return result;
   }, { clear: 0, fixable: 0, blocker: 0 });
+  const chipCounts = CHIP_ORDER
+    .map((chip) => [chip, sortedStatuses.filter((item) => item.chip === chip).length] as const)
+    .filter(([, count]) => count > 0);
+  // New answers never fall back to the retired "Possibly doable" headline.
+  const modern = Boolean(outlook) || chipped || presentation.verdict.kicker === "Eligibility Outlook";
   const sectionCount = [
     presentation.borrower_script || presentation.key_callout,
     presentation.statuses.length,
@@ -170,12 +234,13 @@ export function AnswerPresentationView({
   const doneCount = presentation.steps.reduce((total, _step, index) => total + (completed.has(`step-${index}`) ? 1 : 0), 0);
 
   const sections = [
-    (presentation.borrower_script || presentation.key_callout) && ["say", "Say this"],
-    sortedStatuses.length && ["stand", "Where you stand"],
-    presentation.steps.length && ["steps", "Steps"],
-    (presentation.plan_b.length || presentation.easiest_fix) && ["plan", "If it’s a no"],
-    presentation.donts.length && ["dont", "Don’t"],
-    presentation.documents.length && ["docs", "Get these"],
+    (presentation.borrower_script || presentation.key_callout) && ["say", "Talking points"],
+    sortedStatuses.length && ["stand", "Breakdown"],
+    presentation.steps.length && ["steps", "Next steps"],
+    (presentation.plan_b.length || presentation.easiest_fix) && ["plan", "Alternative paths"],
+    presentation.donts.length && ["dont", "Pitfalls"],
+    presentation.documents.length && ["docs", "Documents"],
+    presentation.next_fact_needed && ["ask", "Open question"],
   ].filter((section): section is string[] => Boolean(section));
 
   function updateState(nextState: AnswerUiState) {
@@ -214,7 +279,10 @@ export function AnswerPresentationView({
   }
 
   const citationProps = { byIndex, selectedSource, onSelect: openSource };
-  const documentText = presentation.documents.map((item) => item.label).filter(Boolean).join("\n");
+  const documentText = presentation.documents
+    .map((item) => [item.label, item.detail].filter(Boolean).join("\n  "))
+    .filter(Boolean)
+    .join("\n");
   const mailto = `mailto:?subject=${encodeURIComponent("Documents needed")}&body=${encodeURIComponent(documentText)}`;
   const footerHasCitations = allSourceIds.some((id) => byIndex.has(id));
 
@@ -227,19 +295,33 @@ export function AnswerPresentationView({
       </span>
     </p>}
 
-    {(presentation.verdict.kicker || presentation.verdict.text || presentation.verdict.reason) && <div className={`cv-verdict cv-verdict--${presentation.verdict.type}${complex ? "" : " cv-verdict--compact"}${complex && sortedStatuses.length ? " cv-verdict--with-counts" : ""}`}>
+    {outlook ? <div className={`cv-verdict cv-outlook cv-outlook--${outlook.chip}${chipCounts.length ? " cv-verdict--with-counts" : ""}`} role="group" aria-label="Eligibility Outlook">
+      <span className="cv-verdict__icon"><StatusIcon type={outlook.chip} /></span>
+      <div className="cv-verdict__body">
+        <span className="cv-verdict__kicker">Eligibility Outlook</span>
+        <p className="cv-verdict__text">{outlook.label}</p>
+        {presentation.verdict.text && presentation.verdict.text !== outlook.label && <p className="cv-verdict__why">{presentation.verdict.text}</p>}
+        {presentation.verdict.reason && <p className="cv-verdict__why">{presentation.verdict.reason}</p>}
+        {outlook.basis && <p className="cv-outlook__basis">{outlook.basis}</p>}
+      </div>
+      {chipCounts.length > 0 && <ul className="cv-verdict__counts" aria-label="Breakdown summary">
+        {chipCounts.map(([chip, count]) => <li key={chip} className={`is-${chip}`}>{count} {CHIP_LABELS[chip].toLowerCase()}</li>)}
+      </ul>}
+    </div> : (presentation.verdict.kicker || presentation.verdict.text || presentation.verdict.reason) && <div className={`cv-verdict cv-verdict--${presentation.verdict.type}${complex ? "" : " cv-verdict--compact"}${complex && sortedStatuses.length ? " cv-verdict--with-counts" : ""}`}>
       <span className="cv-verdict__icon"><StatusIcon type={presentation.verdict.type} /></span>
       <div className="cv-verdict__body">
-        {(complex || presentation.verdict.kicker) && <span className="cv-verdict__kicker">{complex ? "Verdict" : presentation.verdict.kicker}</span>}
-        <p className="cv-verdict__text">{complex ? verdictHeadline : presentation.verdict.text}</p>
-        {complex && presentation.verdict.text !== verdictHeadline && <p className="cv-verdict__why">{presentation.verdict.text}</p>}
+        {(complex || presentation.verdict.kicker) && <span className="cv-verdict__kicker">{complex ? (modern ? presentation.verdict.kicker : "Verdict") : presentation.verdict.kicker}</span>}
+        <p className="cv-verdict__text">{complex && !modern ? verdictHeadline : presentation.verdict.text}</p>
+        {complex && !modern && presentation.verdict.text !== verdictHeadline && <p className="cv-verdict__why">{presentation.verdict.text}</p>}
         {presentation.verdict.reason && <p className="cv-verdict__why">{presentation.verdict.reason}</p>}
       </div>
-      {complex && sortedStatuses.length > 0 && <ul className="cv-verdict__counts">
+      {complex && sortedStatuses.length > 0 && (chipped ? <ul className="cv-verdict__counts" aria-label="Breakdown summary">
+        {chipCounts.map(([chip, count]) => <li key={chip} className={`is-${chip}`}>{count} {CHIP_LABELS[chip].toLowerCase()}</li>)}
+      </ul> : <ul className="cv-verdict__counts">
         {counts.clear > 0 && <li className="is-clear">{counts.clear} clear</li>}
         {counts.fixable > 0 && <li className="is-fixable">{counts.fixable} fixable</li>}
         {counts.blocker > 0 && <li className="is-blocker">{counts.blocker} blocker{counts.blocker === 1 ? "" : "s"} to check</li>}
-      </ul>}
+      </ul>)}
     </div>}
 
     {complex && sections.length >= 4 && <nav className="cv-jump" aria-label="Jump to section">
@@ -247,7 +329,7 @@ export function AnswerPresentationView({
     </nav>}
 
     {(presentation.borrower_script || presentation.key_callout) && <section className="cv-section" id={`${anchorPrefix}-say`}>
-      {presentation.borrower_script && <h3 className="cv-section__title">Say this to the borrower</h3>}
+      {presentation.borrower_script && <h3 className="cv-section__title">Borrower Talking Points</h3>}
       {presentation.borrower_script && <div className="cv-script">
         <blockquote>{presentation.borrower_script}</blockquote>
         <div><button className="cv-btn cv-btn--primary" type="button" onClick={() => void copyText(presentation.borrower_script!, "script")}>{copied === "script" ? "Copied" : "Copy script"}</button></div>
@@ -256,16 +338,19 @@ export function AnswerPresentationView({
     </section>}
 
     {sortedStatuses.length > 0 && (complex ? <section className="cv-section" id={`${anchorPrefix}-stand`}>
-      <h3 className="cv-section__title">Where you stand</h3>
-      <ul className="cv-status cv-card">{sortedStatuses.map((item, index) => <li key={`${item.type}-${item.item}-${index}`}>
-        <span className={`cv-badge cv-badge--${item.type}`}><StatusIcon type={item.type} />{item.type[0].toUpperCase() + item.type.slice(1)}</span>
-        <span className="cv-status__item">{item.item}</span>
-        <span className="cv-status__why">{item.reason}<Citations {...citationProps} source_ids={item.source_ids} inline /></span>
-      </li>)}</ul>
-    </section> : <ol className="cv-conditions">{sortedStatuses.map((item, index) => <li key={`${item.item}-${index}`}><span><strong>{item.item}.</strong> {item.reason}<Citations {...citationProps} source_ids={item.source_ids} inline /></span></li>)}</ol>)}
+      <h3 className="cv-section__title">Eligibility Breakdown</h3>
+      <ul className="cv-status cv-card">{sortedStatuses.map((item, index) => {
+        const type = legacyType(item);
+        return <li key={`${item.chip ?? type}-${item.item}-${index}`} data-cv-chip={item.chip ?? undefined}>
+          {item.chip ? <ChipBadge chip={item.chip} /> : <span className={`cv-badge cv-badge--${type}`}><StatusIcon type={type} />{type[0].toUpperCase() + type.slice(1)}</span>}
+          <span className="cv-status__item">{item.item}{item.decides && (item.chip === "open" || item.chip === "not_yet") && <small className="cv-status__decides">{item.chip === "open" ? "Depends on" : "Clears"}: {item.decides}</small>}</span>
+          <span className="cv-status__why">{item.reason}<Citations {...citationProps} source_ids={item.source_ids} inline /></span>
+        </li>;
+      })}</ul>
+    </section> : <ol className="cv-conditions">{sortedStatuses.map((item, index) => <li key={`${item.item}-${index}`}><span>{item.chip && <ChipBadge chip={item.chip} />}<strong>{item.item}.</strong> {item.reason}<Citations {...citationProps} source_ids={item.source_ids} inline /></span></li>)}</ol>)}
 
     {presentation.steps.length > 0 && (complex ? <section className="cv-section" id={`${anchorPrefix}-steps`}>
-      <h3 className="cv-section__title">What to do, in order
+      <h3 className="cv-section__title">Recommended Next Steps
         <span className="cv-progress" aria-hidden="true"><span style={{ width: `${(doneCount / presentation.steps.length) * 100}%` }} /></span>
         <span className="cv-progress-count" aria-live="polite">{doneCount} of {presentation.steps.length} done</span>
       </h3>
@@ -280,7 +365,7 @@ export function AnswerPresentationView({
         </li>;
       })}</ol>
     </section> : presentation.steps.length === 1 ? <div className="cv-callout cv-callout--next">
-      <span className="cv-callout__tag">Next step</span>
+      <span className="cv-callout__tag">Recommended next step</span>
       <div className="cv-step__body">
         <strong>{presentation.steps[0].title}</strong>
         <StepDetails step={presentation.steps[0]} citationProps={citationProps} />
@@ -293,7 +378,7 @@ export function AnswerPresentationView({
     </li>)}</ol>)}
 
     {(presentation.plan_b.length > 0 || presentation.easiest_fix) && (complex ? <section className="cv-section" id={`${anchorPrefix}-plan`}>
-      <h3 className="cv-section__title">If it’s a no: how we get to yes</h3>
+      <h3 className="cv-section__title">Alternative Paths</h3>
       <div className="cv-card cv-plan">
         {presentation.plan_b.length > 0 && <ol className="cv-timeline">{presentation.plan_b.map((item, index) => <li key={`${item.when}-${item.title}-${index}`}>
           <span className="cv-timeline__rail" /><span className="cv-timeline__when">{item.when}</span><h4 className="cv-timeline__what">{item.title}</h4>
@@ -302,7 +387,7 @@ export function AnswerPresentationView({
         {presentation.easiest_fix && <div className="cv-callout cv-callout--path"><span className="cv-callout__tag">Easiest fix</span><span>{presentation.easiest_fix}</span></div>}
       </div>
     </section> : <div className="cv-callout cv-callout--path" id={`${anchorPrefix}-plan`}>
-      <span className="cv-callout__tag">If it’s a no</span>
+      <span className="cv-callout__tag">Alternative paths</span>
       <div className="cv-step__body">
         {presentation.plan_b.map((item, index) => <div className="cv-step__body" key={`short-plan-${index}`}>
           <span>{item.when}: <strong>{item.title}</strong></span>
@@ -314,17 +399,17 @@ export function AnswerPresentationView({
     </div>)}
 
     {presentation.donts.length > 0 && (complex ? <section className="cv-section" id={`${anchorPrefix}-dont`}>
-      <h3 className="cv-section__title">Don’t</h3>
+      <h3 className="cv-section__title">Common Pitfalls</h3>
       <ul className="cv-donts cv-card">{presentation.donts.map((item, index) => <li key={`${item.text}-${index}`}><span>{item.text}<Citations {...citationProps} source_ids={item.source_ids} inline /></span></li>)}</ul>
     </section> : <div className="cv-callout cv-callout--watch">
-      <span className="cv-callout__tag">Watch out</span>
+      <span className="cv-callout__tag">Common pitfalls</span>
       <div className="cv-step__body">{presentation.donts.map((item, index) => <span key={`short-dont-${index}`}>
         {item.text}<Citations {...citationProps} source_ids={item.source_ids} inline />
       </span>)}</div>
     </div>)}
 
     {presentation.documents.length > 0 && <section className="cv-section" id={`${anchorPrefix}-docs`}>
-      <h3 className="cv-section__title">Get these</h3>
+      <h3 className="cv-section__title">Documentation Required</h3>
       <div className="cv-card">
         <ul className="cv-checklist">{presentation.documents.map((item, index) => {
           const id = `document-${index}`;
@@ -333,6 +418,8 @@ export function AnswerPresentationView({
             <input id={inputId} type="checkbox" checked={checkedDocuments.has(id)} onChange={() => toggleDocument(id)} />
             <div>
               <label htmlFor={inputId}>{item.label}</label>
+              {item.detail && <p className="cv-checklist__detail">{item.detail}</p>}
+              {item.basis && <p className="cv-checklist__basis"><span>Basis</span>{item.basis}</p>}
               <Citations {...citationProps} source_ids={item.source_ids} />
             </div>
           </li>;
@@ -344,7 +431,7 @@ export function AnswerPresentationView({
       </div>
     </section>}
 
-    {presentation.next_fact_needed && <div className="cv-callout cv-callout--next"><span className="cv-callout__tag">Next fact needed</span><span>{presentation.next_fact_needed}</span></div>}
+    {presentation.next_fact_needed && <div className="cv-callout cv-callout--next cv-callout--ask" id={`${anchorPrefix}-ask`}><span className="cv-callout__tag">Open Question for Borrower</span><span>{presentation.next_fact_needed}</span></div>}
 
     {(presentation.verify_line || footerHasCitations) && <footer className="cv-footer">
       {presentation.verify_line && <p className="cv-footer__verify">{presentation.verify_line}</p>}

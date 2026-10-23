@@ -70,7 +70,7 @@ describe("AnswerPresentationView", () => {
     expect(container.querySelector(".cv-verdict__text")).toHaveTextContent("Possibly doable");
     expect(screen.getByText(conclusion)).toHaveClass("cv-verdict__why");
     expect(screen.getByText("Check the details.")).toBeInTheDocument();
-    expect(screen.getByRole("heading", { name: "Say this to the borrower" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Borrower Talking Points" })).toBeInTheDocument();
     expect(screen.getByRole("checkbox", { name: "Signed gift letter" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Copy script" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument());
@@ -85,7 +85,7 @@ describe("AnswerPresentationView", () => {
       statuses: [{ type: "fixable", item: "Gift documentation", reason: "A signed letter is needed.", source_ids: [1] }],
       steps: [{ title: "Document the gift", bullets: ["Obtain the signed letter"], stop_if: null, watch_out: null, source_ids: [1] }],
     })} sources={[source]} />);
-    expect(screen.getByRole("heading", { name: "Where you stand" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Eligibility Breakdown" })).toBeInTheDocument();
     expect(screen.getByText("1 fixable")).toBeInTheDocument();
     expect(container.querySelector(".cv-verdict")).toHaveClass("cv-verdict--fixable", "cv-verdict--with-counts");
     expect(within(container.querySelector(".cv-steps")!).getByText("Obtain the signed letter")).toBeInTheDocument();
@@ -114,7 +114,7 @@ describe("AnswerPresentationView", () => {
 
     expect(screen.getByRole("article")).toHaveClass("cv-answer--short");
     const next = within(container.querySelector(".cv-callout--next")!);
-    for (const text of ["Next step", "Verify the income", "Obtain current paystubs", "Confirm the employment history", "Stop if", "The employment cannot be verified", "Watch out", "Do not count unverified overtime"]) {
+    for (const text of ["Recommended next step", "Verify the income", "Obtain current paystubs", "Confirm the employment history", "Stop if", "The employment cannot be verified", "Watch out", "Do not count unverified overtime"]) {
       expect(next.getByText(text)).toBeInTheDocument();
     }
     expect(container.querySelector(".cv-callout--stop")).toBeInTheDocument();
@@ -159,7 +159,7 @@ describe("AnswerPresentationView", () => {
 
     expect(screen.getByRole("article")).toHaveClass("cv-answer--short");
     const plan = within(container.querySelector(".cv-callout--path")!);
-    for (const text of ["If it’s a no", "Document the gap", "Request an explanation", "Verify the dates", "Reassess", "Use the verified figures"]) {
+    for (const text of ["Alternative paths", "Document the gap", "Request an explanation", "Verify the dates", "Reassess", "Use the verified figures"]) {
       expect(plan.getByText(text)).toBeInTheDocument();
     }
     expect(plan.getByText(/Now:/)).toBeInTheDocument();
@@ -188,7 +188,7 @@ describe("AnswerPresentationView", () => {
   it("does not label a standalone key callout as a borrower script", () => {
     render(<AnswerPresentationView presentation={shortAnswer({ key_callout: "Confirm the applicable policy first" })} sources={[source]} />);
     expect(screen.getByText("Confirm the applicable policy first")).toBeInTheDocument();
-    expect(screen.queryByText("Say this to the borrower")).not.toBeInTheDocument();
+    expect(screen.queryByText("Borrower Talking Points")).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Copy script" })).not.toBeInTheDocument();
   });
 
@@ -232,7 +232,7 @@ describe("AnswerPresentationView", () => {
     expect(screen.getByText("2 clear")).toBeInTheDocument();
     expect(screen.getByText("1 fixable")).toBeInTheDocument();
     expect(screen.getByText("1 blocker to check")).toBeInTheDocument();
-    const statuses = screen.getByRole("heading", { name: "Where you stand" }).parentElement!;
+    const statuses = screen.getByRole("heading", { name: "Eligibility Breakdown" }).parentElement!;
     expect(within(statuses).getAllByText(/Clear|Fixable|Blocker/).map((node) => node.textContent)).toEqual(["Clear", "Clear", "Fixable", "Blocker"]);
     expect(container.querySelector('[data-cv-step="step-0"]')).toHaveClass("is-done");
     expect(container.querySelector('[data-cv-step="step-2"]')).toHaveClass("cv-step--final");
@@ -260,5 +260,113 @@ describe("AnswerPresentationView", () => {
     expect(citation).toHaveAttribute("aria-pressed", "true");
     expect(select).toHaveBeenCalledWith(source, [source]);
     expect(open).not.toHaveBeenCalled();
+  });
+
+  describe("Stage 2 contract", () => {
+    const practice: CitationSource = {
+      index: 2, document_id: "playbook", doc_name: "Intellence Underwriter Playbook (FHA)", page_number: 0,
+      section_id: "Employment gaps", sub_section_id: null, citation_url: "", kind: "practice",
+      text_preview: "Underwriters ask for a letter for any gap over 30 days.",
+    };
+    const overlay: CitationSource = { ...practice, index: 3, doc_name: "Acme FHA overlays", section_id: "Minimum credit score", kind: "overlay" };
+    const comparison: CitationSource = { ...source, index: 4, section_id: "B3-3.2-02", kind: "comparison" };
+    const calculation: CitationSource = { ...practice, index: 5, doc_name: "Chapter & Verse calculator", section_id: "Borrower calculations", kind: "calculation" };
+    const sources = [source, practice, overlay, comparison, calculation];
+
+    const scenario = (overrides: Partial<AnswerPresentation> = {}): AnswerPresentation => shortAnswer({
+      answer_kind: "borrower_scenario",
+      verdict: { type: "fixable", kicker: "Eligibility Outlook", text: "The salary works; the bonus waits.", reason: "", source_ids: [1] },
+      outlook: { chip: "open", label: "Pending: relocation distance", basis: "Based on HUD 4000.1 and the facts provided. Not a credit decision.", items: ["Departing residence"] },
+      statuses: [
+        { chip: "met", type: "clear", item: "Employment gap", reason: "Under six months.", source_ids: [1] },
+        { chip: "open", type: "fixable", decides: "relocation distance", item: "Departing residence", reason: "Depends on the move.", source_ids: [2] },
+        { chip: "condition", type: "fixable", item: "Gift funds", reason: "Needs a gift letter.", source_ids: [3] },
+        { chip: "discretion", type: "fixable", item: "Chapter 7", reason: "Extenuating circumstances.", source_ids: [1] },
+      ],
+      ...overrides,
+    });
+
+    it("leads with the Eligibility Outlook label, its chip and the fixed basis line", () => {
+      const { container } = render(<AnswerPresentationView presentation={scenario()} sources={sources} />);
+      const outlook = screen.getByRole("group", { name: "Eligibility Outlook" });
+      expect(outlook).toHaveClass("cv-outlook--open");
+      expect(within(outlook).getByText("Eligibility Outlook")).toBeInTheDocument();
+      expect(within(outlook).getByText("Pending: relocation distance")).toHaveClass("cv-verdict__text");
+      expect(within(outlook).getByText("The salary works; the bonus waits.")).toBeInTheDocument();
+      expect(within(outlook).getByText("Based on HUD 4000.1 and the facts provided. Not a credit decision.")).toBeInTheDocument();
+      expect(within(outlook).getByLabelText("Breakdown summary")).toHaveTextContent("1 open1 discretion1 condition1 met");
+      expect(container.textContent).not.toMatch(/Possibly doable|Verdict/);
+    });
+
+    it("lists the breakdown worst first with a chip, icon and word per item", () => {
+      const { container } = render(<AnswerPresentationView presentation={scenario()} sources={sources} />);
+      const rows = Array.from(container.querySelectorAll(".cv-status > li"));
+      expect(rows.map((row) => row.getAttribute("data-cv-chip"))).toEqual(["open", "discretion", "condition", "met"]);
+      expect(rows.map((row) => row.querySelector(".cv-chip")!.textContent)).toEqual(["Open", "Discretion", "Condition", "Met"]);
+      rows.forEach((row) => expect(row.querySelector(".cv-chip svg")).not.toBeNull());
+      expect(within(rows[0] as HTMLElement).getByText("Depends on: relocation distance")).toBeInTheDocument();
+    });
+
+    it("uses the client's section headers in order, ending with the open question", () => {
+      render(<AnswerPresentationView presentation={scenario({
+        borrower_script: "We can likely use your salary.",
+        steps: [{ title: "Confirm the move", bullets: [], stop_if: "Under 100 miles", watch_out: null, source_ids: [1] }],
+        plan_b: [{ when: "Now", title: "Consider conventional", bullets: [], source_ids: [4] }],
+        donts: [{ text: "Do not count the bonus yet", source_ids: [1] }],
+        documents: [{ label: "Written VOE", source_ids: [1] }],
+        next_fact_needed: "How far is the new job from the current home?",
+      })} sources={sources} />);
+      expect(screen.getAllByRole("heading", { level: 3 }).map((heading) => heading.firstChild?.textContent?.trim())).toEqual([
+        "Borrower Talking Points", "Eligibility Breakdown", "Recommended Next Steps", "Alternative Paths", "Common Pitfalls", "Documentation Required",
+      ]);
+      expect(screen.getByText("Open Question for Borrower")).toBeInTheDocument();
+      expect(screen.getByRole("navigation", { name: "Jump to section" })).toHaveTextContent(/Talking points.*Breakdown.*Next steps.*Alternative paths.*Pitfalls.*Documents.*Open question/);
+    });
+
+    it("labels every non-guideline source and keeps guideline citations first", () => {
+      const select = vi.fn();
+      render(<AnswerPresentationView presentation={scenario({ statuses: [], outlook: null, steps: [
+        { title: "Check everything", bullets: [], stop_if: null, watch_out: null, source_ids: [3, 5, 2, 4, 1] },
+      ] })} sources={sources} onCitationSelect={select} />);
+      const step = screen.getByText("Check everything").closest("li")!;
+      const chips = within(step).getAllByRole("button");
+      ["source", "comparison", "calculation", "practice", "overlay"].forEach((kind, index) => expect(chips[index]).toHaveClass(`cv-cite--${kind}`));
+      expect(chips[0]).not.toHaveClass("cv-cite--labeled");
+      chips.slice(1).forEach((chip) => expect(chip).toHaveClass("cv-cite--labeled"));
+      expect(chips.map((chip) => chip.textContent)).toEqual([
+        "B3-6-02", "Conventional comparisonB3-3.2-02", "CalculatedBorrower calculations", "Underwriter practiceEmployment gaps", "OverlayMinimum credit score",
+      ]);
+      expect(chips[3]).toHaveAttribute("title", "Underwriter practice · Employment gaps · Intellence Underwriter Playbook (FHA)");
+      fireEvent.click(chips[3]);
+      expect(select).toHaveBeenCalledWith(practice, expect.any(Array));
+    });
+
+    it("shows a letter of explanation with what it covers and its basis", () => {
+      render(<AnswerPresentationView presentation={scenario({ documents: [{
+        label: "Letter of explanation: Employment gap",
+        detail: "Covers the reason for the gap. Supporting documents: a written VOE.",
+        basis: "Underwriter practice",
+        source_ids: [2],
+      }] })} sources={sources} />);
+      expect(screen.getByRole("checkbox", { name: "Letter of explanation: Employment gap" })).toBeInTheDocument();
+      expect(screen.getByText("Covers the reason for the gap. Supporting documents: a written VOE.")).toHaveClass("cv-checklist__detail");
+      expect(screen.getByText("Underwriter practice", { selector: ".cv-checklist__basis" })).toBeInTheDocument();
+    });
+
+    it("never shows the retired headline for a new scenario answer without chips", () => {
+      const { container } = render(<AnswerPresentationView presentation={scenario({ outlook: null, statuses: [], borrower_script: "Script", documents: [{ label: "VOE", source_ids: [] }] })} sources={sources} />);
+      expect(container.querySelector(".cv-verdict__kicker")).toHaveTextContent("Eligibility Outlook");
+      expect(container.querySelector(".cv-verdict__text")).toHaveTextContent("The salary works; the bonus waits.");
+      expect(container.textContent).not.toContain("Possibly doable");
+    });
+
+    it("renders an ineligible outlook as a stop", () => {
+      render(<AnswerPresentationView presentation={scenario({
+        outlook: { chip: "ineligible", label: "Ineligible under FHA: consider conventional", basis: "", items: ["Second job"] },
+        statuses: [{ chip: "ineligible", decides: "conventional", item: "Second job", reason: "One year only.", source_ids: [1] }],
+      })} sources={sources} />);
+      expect(screen.getByRole("group", { name: "Eligibility Outlook" })).toHaveClass("cv-outlook--ineligible");
+      expect(screen.getByText("Ineligible", { selector: ".cv-chip" })).toHaveClass("cv-chip--ineligible");
+    });
   });
 });
