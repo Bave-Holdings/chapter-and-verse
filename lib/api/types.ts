@@ -75,12 +75,30 @@ export type CitationSource = {
   text_preview?: string | null;
   citation_url?: string | null;
   chunk_id?: string | null;
+  /** guideline | practice | overlay | comparison | calculation; saved answers may lack it. */
+  kind?: SourceKind | string | null;
+  /** Older name for `kind`, still read for saved answers. */
   source_kind?: string | null;
   cited_passages?: Array<{
     claim: string;
     passage: string;
     page_number: number;
   }>;
+};
+
+export type SourceKind = "guideline" | "practice" | "overlay" | "comparison" | "calculation";
+
+/** Eligibility Breakdown chips, worst first. */
+export type Chip = "ineligible" | "not_yet" | "open" | "discretion" | "condition" | "met";
+
+export type AusFinding = "approve" | "refer" | "manual";
+
+/** Computed by the backend from the worst breakdown chip, never written by the model. */
+export type EligibilityOutlook = {
+  chip: Chip;
+  label: string;
+  basis: string;
+  items: string[];
 };
 
 export type SourceIds = {
@@ -100,11 +118,16 @@ export type AnswerPresentation = {
     text: string;
     reason: string;
   };
+  /** Absent on answers saved before the chips. */
+  outlook?: EligibilityOutlook | null;
   borrower_script: string | null;
   key_callout: string | null;
   statuses: Array<
     SourceIds & {
-      type: "clear" | "fixable" | "blocker";
+      /** Legacy class; answers saved before the chips have only this. */
+      type?: "clear" | "fixable" | "blocker" | null;
+      chip?: Chip | null;
+      decides?: string | null;
       item: string;
       reason: string;
     }
@@ -126,7 +149,8 @@ export type AnswerPresentation = {
   >;
   easiest_fix: string | null;
   donts: Array<SourceIds & { text: string }>;
-  documents: Array<SourceIds & { label: string }>;
+  /** detail and basis are filled by code for letters of explanation. */
+  documents: Array<SourceIds & { label: string; detail?: string | null; basis?: string | null }>;
   next_fact_needed: string | null;
   verify_line: string | null;
   citation_passages?: Array<{
@@ -189,3 +213,22 @@ export type StreamEvent =
   | { event: "presentation"; data: { presentation: AnswerPresentation } }
   | { event: "done"; data: AskResult }
   | { event: "error"; data: AskResult };
+
+export type OverlayRule = {
+  id: string;
+  title: string;
+  body: string;
+  position: number;
+};
+
+export type OverlaySet = {
+  agent_key: string;
+  source_name: string | null;
+  rules: OverlayRule[];
+  loaded_at: string | null;
+};
+
+export type OverlayClear = {
+  agent_key: string;
+  deactivated: number;
+};

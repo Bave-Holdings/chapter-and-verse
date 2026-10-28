@@ -1,5 +1,5 @@
 import { ApiError } from "./client";
-import type { AskResult, StreamEvent } from "./types";
+import type { AskResult, AusFinding, StreamEvent } from "./types";
 
 type StreamHandlers = {
   onEvent: (event: StreamEvent) => void;
@@ -52,12 +52,14 @@ export async function streamQuestion(
   chatId: string,
   handlers: StreamHandlers,
   signal?: AbortSignal,
+  ausFinding?: AusFinding | null,
 ): Promise<void> {
   const response = await fetch("/api/v1/ask/stream", {
     method: "POST",
     credentials: "same-origin",
     headers: { Accept: "text/event-stream", "Content-Type": "application/json" },
-    body: JSON.stringify({ question, chat_id: chatId }),
+    // The AUS finding is sent only when the loan officer entered one.
+    body: JSON.stringify({ question, chat_id: chatId, ...(ausFinding ? { aus_finding: ausFinding } : {}) }),
     signal,
   });
 

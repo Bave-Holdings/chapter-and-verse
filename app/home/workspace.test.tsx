@@ -111,6 +111,29 @@ describe("KnowledgeWorkspace integration", () => {
     expect(screen.queryByText(/Signed in as/i)).not.toBeInTheDocument();
   });
 
+  it("collapses the workspace links to give recent chats more room and remembers it", async () => {
+    const { unmount } = render(<KnowledgeWorkspace />);
+    const sidebar = within(await screen.findByRole("complementary", { name: "Main navigation" }));
+    const toggle = sidebar.getByRole("button", { name: "WORKSPACE" });
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(sidebar.getByRole("link", { name: "All Libraries" })).toBeVisible();
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    expect(sidebar.queryByRole("link", { name: "All Libraries" })).not.toBeInTheDocument();
+    expect(sidebar.getByRole("region", { name: "Recent conversations" })).toBeInTheDocument();
+    expect(window.localStorage.getItem("cv:workspace-collapsed")).toBe("true");
+
+    unmount();
+    render(<KnowledgeWorkspace />);
+    const restored = within(await screen.findByRole("complementary", { name: "Main navigation" }));
+    await waitFor(() => expect(restored.getByRole("button", { name: "WORKSPACE" })).toHaveAttribute("aria-expanded", "false"));
+    fireEvent.click(restored.getByRole("button", { name: "WORKSPACE" }));
+    expect(restored.getByRole("link", { name: "All Libraries" })).toBeVisible();
+    expect(window.localStorage.getItem("cv:workspace-collapsed")).toBe("false");
+    window.localStorage.removeItem("cv:workspace-collapsed");
+  });
+
   it("renders most-asked dashboard cards and submits them through the card's agent", async () => {
     mocks.createChat.mockResolvedValue(fhaChat);
     mocks.stream.mockImplementation(async (_question, _chatId, handlers) => {
@@ -130,7 +153,7 @@ describe("KnowledgeWorkspace integration", () => {
     fireEvent.click(within(cards).getByRole("button", { name: "Ask FHA Handbook 4000.1: What is the FHA rule?" }));
 
     await waitFor(() => expect(mocks.createChat).toHaveBeenCalledWith("fha_handbook"));
-    expect(mocks.stream).toHaveBeenCalledWith("What is the FHA rule?", fhaChat.id, expect.any(Object), expect.any(AbortSignal));
+    expect(mocks.stream).toHaveBeenCalledWith("What is the FHA rule?", fhaChat.id, expect.any(Object), expect.any(AbortSignal), null);
     expect(await screen.findByRole("log")).toHaveTextContent("FHA answer");
     expect(screen.getAllByText("Mortgage / FHA Handbook 4000.1")).toHaveLength(2);
     expect(screen.getByRole("heading", { name: "FHA Handbook 4000.1" })).toBeInTheDocument();
@@ -362,7 +385,7 @@ describe("KnowledgeWorkspace integration", () => {
     await waitFor(() => expect(mocks.createChat).toHaveBeenCalledTimes(1));
     expect(mocks.createChat).toHaveBeenCalledWith("mortgage_guidelines");
     expect(mocks.stream).toHaveBeenCalledTimes(1);
-    expect(mocks.stream).toHaveBeenCalledWith("What is the rule?", chat.id, expect.any(Object), expect.any(AbortSignal));
+    expect(mocks.stream).toHaveBeenCalledWith("What is the rule?", chat.id, expect.any(Object), expect.any(AbortSignal), null);
     expect(mocks.replace).toHaveBeenCalledWith("/category/mortgage?chat=chat-1", { scroll: false });
     const conversation = await screen.findByRole("log");
     expect(conversation).toHaveTextContent("What is the rule?");
@@ -470,7 +493,25 @@ describe("KnowledgeWorkspace integration", () => {
     fireEvent.click(screen.getByRole("button", { name: "Send message" }));
 
     await waitFor(() => expect(mocks.createChat).toHaveBeenCalledWith(agentKey));
-    expect(mocks.stream).toHaveBeenCalledWith("Scoped question", scopedChat.id, expect.any(Object), expect.any(AbortSignal));
+    expect(mocks.stream).toHaveBeenCalledWith("Scoped question", scopedChat.id, expect.any(Object), expect.any(AbortSignal), null);
+  });
+
+  it("sends the AUS finding chosen for the chat and keeps it with the new chat", async () => {
+    const scopedChat = { ...chat, id: "chat-aus", agent_key: "fha_handbook" };
+    mocks.createChat.mockResolvedValue(scopedChat);
+    mocks.stream.mockResolvedValue(undefined);
+    render(<KnowledgeWorkspace categoryMode initialAgentSlug="fha" />);
+
+    const picker = await screen.findByRole("group", { name: "AUS finding" });
+    expect(within(picker).getByRole("radio", { name: "Not entered" })).toBeChecked();
+    fireEvent.click(within(picker).getByRole("radio", { name: "Refer" }));
+    fireEvent.change(screen.getByRole("textbox", { name: "Write a message" }), { target: { value: "Refer file question" } });
+    fireEvent.click(screen.getByRole("button", { name: "Send message" }));
+
+    await waitFor(() => expect(mocks.stream).toHaveBeenCalledWith("Refer file question", scopedChat.id, expect.any(Object), expect.any(AbortSignal), "refer"));
+    expect(screen.getByText(/AUS: Refer/)).toBeInTheDocument();
+    expect(JSON.parse(window.localStorage.getItem("cv:aus-findings") ?? "{}")).toEqual({ "chat-aus": "refer" });
+    window.localStorage.removeItem("cv:aus-findings");
   });
 
   it("cancels an in-flight response and exposes a retry action", async () => {

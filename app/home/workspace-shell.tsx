@@ -16,7 +16,7 @@ export function WorkspaceShell({ children }: { children: React.ReactNode }) {
     routeKey={pathname}
     categoryMode={category || pathname === "/home/chat"}
     profile={pathname === "/profile"}
-    admin={pathname === "/admin/ingest"}
+    admin={pathname === "/admin/ingest" || pathname === "/admin/overlays"}
     initialAgentSlug={params.slug ?? "mortgage"}
     initialChatId={category ? searchParams.get("chat") ?? undefined : undefined}
   >{children}</KnowledgeWorkspace>;

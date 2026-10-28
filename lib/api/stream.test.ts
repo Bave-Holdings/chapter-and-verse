@@ -84,6 +84,21 @@ describe("streamQuestion", () => {
     expect(events[0]).toEqual({ event: "error", data: { status: "error", error: "model failed" } });
   });
 
+  it("adds the AUS finding only when one was entered", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockImplementation(() => Promise.resolve(new Response(
+      chunkedStream(["event: done\ndata: {\"status\":\"answered\"}\n\n"]),
+      { status: 200 },
+    ))));
+    await streamQuestion("Question", "chat-1", { onEvent: () => undefined }, undefined, "refer");
+    expect(fetch).toHaveBeenLastCalledWith("/api/v1/ask/stream", expect.objectContaining({
+      body: JSON.stringify({ question: "Question", chat_id: "chat-1", aus_finding: "refer" }),
+    }));
+    await streamQuestion("Question", "chat-1", { onEvent: () => undefined }, undefined, null);
+    expect(fetch).toHaveBeenLastCalledWith("/api/v1/ask/stream", expect.objectContaining({
+      body: JSON.stringify({ question: "Question", chat_id: "chat-1" }),
+    }));
+  });
+
   it("emits a client error if the stream closes without a terminal event", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(
       chunkedStream(["event: token\ndata: {\"text\":\"partial\"}\n\n"]),

@@ -15,6 +15,7 @@ import {
   type Agent,
   type AnswerPresentation,
   type AnswerUiState,
+  type AusFinding,
   type Chat,
   type ChatMessage,
   type CitationSource,
@@ -37,7 +38,7 @@ const AGENT_DISPLAY_NAMES: Record<string, string> = {
   fha_handbook: "FHA Handbook 4000.1",
 };
 
-type IconName = "menu" | "back" | "home" | "person" | "bell" | "logout" | "chevron" | "send" | "close" | "grid" | "chart" | "shield" | "history" | "download";
+type IconName = "menu" | "back" | "home" | "person" | "bell" | "logout" | "chevron" | "send" | "close" | "grid" | "chart" | "shield" | "history" | "download" | "layers";
 type UiMessage = {
   id: string;
   role: "user" | "assistant";
@@ -52,10 +53,50 @@ type UiMessage = {
   retryQuestion?: string;
   presentation?: AnswerPresentation | null;
   uiState?: AnswerUiState;
+  ausFinding?: AusFinding | null;
 };
 type ConversationScrollRequest =
   | { mode: "bottom" }
   | { mode: "turn-start"; messageId: string };
+const AUS_OPTIONS: Array<{ value: AusFinding | null; label: string; title: string }> = [
+  { value: null, label: "Not entered", title: "No AUS finding entered" },
+  { value: "approve", label: "Accept / Approve", title: "TOTAL Accept, DU Approve/Eligible or LPA Accept" },
+  { value: "refer", label: "Refer", title: "TOTAL Refer, DU Refer or LPA Caution: manually underwritten" },
+  { value: "manual", label: "Manual", title: "The file is being manually underwritten" },
+];
+
+const AUS_LABELS: Record<AusFinding, string> = { approve: "Accept / Approve", refer: "Refer", manual: "Manual" };
+
+// The finding is chosen per chat. "new" holds it until the first question creates the chat.
+const AUS_STORAGE_KEY = "cv:aus-findings";
+const NEW_CHAT_AUS_KEY = "new";
+
+function isAusFinding(value: unknown): value is AusFinding {
+  return value === "approve" || value === "refer" || value === "manual";
+}
+
+function readAusFindings(): Record<string, AusFinding> {
+  try {
+    const stored = JSON.parse(window.localStorage.getItem(AUS_STORAGE_KEY) ?? "{}") as Record<string, unknown>;
+    return Object.fromEntries(Object.entries(stored).filter((entry): entry is [string, AusFinding] => isAusFinding(entry[1])));
+  } catch {
+    return {};
+  }
+}
+
+function writeAusFindings(findings: Record<string, AusFinding>) {
+  try {
+    const { [NEW_CHAT_AUS_KEY]: _unsaved, ...saved } = findings;
+    void _unsaved;
+    window.localStorage.setItem(AUS_STORAGE_KEY, JSON.stringify(saved));
+  } catch {
+    // Storage can be unavailable (private windows); the choice still holds for this visit.
+  }
+}
+
+// Collapsing the workspace links leaves more of the sidebar for recent chats.
+const WORKSPACE_COLLAPSED_KEY = "cv:workspace-collapsed";
+
 type CitationPanelState = {
   messageId: string;
   selectedIndex: number;
@@ -78,6 +119,7 @@ function Icon({ name }: { name: IconName }) {
     history: <><path d="M3 11a9 9 0 1 1 2 7M3 4v7h7" /><path d="M12 7v5l-3 2" /></>,
     download: <path d="M12 3v12m-5-5 5 5 5-5M4 16v5h16v-5" />,
     close: <path d="m6 6 12 12M6 18 18 6" />,
+    layers: <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 13 9 5 9-5" /></>,
   };
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{paths[name]}</svg>;
 }
@@ -150,6 +192,7 @@ function messageFromApi(message: ChatMessage): UiMessage {
     sources: message.sources ?? [],
     auditId: message.audit_id,
     presentation: message.presentation ?? null,
+    ausFinding: isAusFinding(message.analysis?.aus_finding) ? message.analysis.aus_finding : null,
     uiState: message.ui_state ?? {
       completed_step_ids: [],
       checked_document_ids: [],
@@ -195,6 +238,8 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
   const [deleteTarget, setDeleteTarget] = useState<Chat | null>(null);
   const [deletingChat, setDeletingChat] = useState(false);
   const [citationPanel, setCitationPanel] = useState<CitationPanelState | null>(null);
+  const [ausFindings, setAusFindings] = useState<Record<string, AusFinding>>({});
+  const [workspaceCollapsed, setWorkspaceCollapsed] = useState(false);
   const drawer = useRef<HTMLDialogElement>(null);
   const deleteDialog = useRef<HTMLDialogElement>(null);
   const deleteTrigger = useRef<HTMLButtonElement>(null);
@@ -220,10 +265,14 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
   const mortgageSelected = MORTGAGE_AGENT_KEYS.has(agentKey);
   const dashboardCards = dashboardQuestions(agents);
   const showConversation = loadingChat || streaming || messages.length > 0;
+  // Only mortgage agents follow an AUS path; the choice is per chat.
+  const showAusPicker = MORTGAGE_AGENT_KEYS.has(agentKey) && Boolean(selectedAgent?.live && selectedAgent.has_documents) && (categoryMode || showConversation);
   const hasCategoryContext = categoryMode;
   const mainCategoryName = mortgageSelected ? "Mortgage" : selectedAgentName;
+  const adminTitle = routeKey === "/admin/overlays" ? "Lender overlays" : "Ingestion admin";
   const headerLabel = showConversation ? `${mainCategoryName} / ${selectedAgentName}` : "Knowledge Hub";
   const headerTitle = showConversation ? selectedAgentName : `Good afternoon, ${displayUserName(user)}`;
+  const ausFinding = ausFindings[activeChatId ?? NEW_CHAT_AUS_KEY] ?? null;
   const activeCitationSource = citationPanel?.sources.find((source) => source.index === citationPanel.selectedIndex)
     ?? citationPanel?.sources[0]
     ?? null;
@@ -235,6 +284,37 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
     }
     setStatus(cause instanceof Error ? cause.message : fallback);
   }, [router]);
+
+  useEffect(() => {
+    setAusFindings(readAusFindings());
+    try {
+      setWorkspaceCollapsed(window.localStorage.getItem(WORKSPACE_COLLAPSED_KEY) === "true");
+    } catch {
+      // Without storage the section simply starts expanded.
+    }
+  }, []);
+
+  function toggleWorkspace() {
+    setWorkspaceCollapsed((collapsed) => {
+      try {
+        window.localStorage.setItem(WORKSPACE_COLLAPSED_KEY, String(!collapsed));
+      } catch {
+        // The choice still holds for this visit.
+      }
+      return !collapsed;
+    });
+  }
+
+  const setChatAusFinding = useCallback((chatId: string | null, finding: AusFinding | null) => {
+    setAusFindings((current) => {
+      const key = chatId ?? NEW_CHAT_AUS_KEY;
+      const next = { ...current };
+      if (finding) next[key] = finding;
+      else delete next[key];
+      writeAusFindings(next);
+      return next;
+    });
+  }, []);
 
   useEffect(() => () => {
     uiStateSaveTimers.current.forEach((timer) => clearTimeout(timer));
@@ -531,6 +611,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
   }
 
   function newChat() {
+    setChatAusFinding(null, null);
     activeStream.current?.abort();
     activeChatLoad.current?.abort();
     activeChatLoad.current = null;
@@ -613,6 +694,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
     setStreaming(true);
     const controller = new AbortController();
     activeStream.current = controller;
+    const finding = MORTGAGE_AGENT_KEYS.has(answeringAgent.key) ? ausFindings[initialChatId ?? NEW_CHAT_AUS_KEY] ?? null : null;
 
     let chatId = initialChatId;
     try {
@@ -620,6 +702,10 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
         const created = await chatsApi.create(answeringAgent.key);
         if (controller.signal.aborted || activeStream.current !== controller) return;
         chatId = created.id;
+        if (finding) {
+          setChatAusFinding(null, null);
+          setChatAusFinding(created.id, finding);
+        }
         setActiveChatId(created.id);
         setChats((items) => mergeChats(items, [created]));
         if (categoryMode) {
@@ -634,8 +720,8 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
       pendingConversationScroll.current = { mode: "turn-start", messageId: userMessageId };
       setMessages((items) => [
         ...items,
-        { id: userMessageId, role: "user", content: cleanQuestion, createdAt: now.toISOString(), sources: [] },
-        { id: pendingId, role: "assistant", content: "", createdAt: now.toISOString(), sources: [], streaming: true, retryQuestion: cleanQuestion, presentation: null, uiState: { completed_step_ids: [], checked_document_ids: [] } },
+        { id: userMessageId, role: "user", content: cleanQuestion, createdAt: now.toISOString(), sources: [], ausFinding: finding },
+        { id: pendingId, role: "assistant", content: "", createdAt: now.toISOString(), sources: [], streaming: true, retryQuestion: cleanQuestion, presentation: null, uiState: { completed_step_ids: [], checked_document_ids: [] }, ausFinding: finding },
       ]);
 
       let receivedText = "";
@@ -675,7 +761,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
             setStatus(message);
           }
         },
-      }, controller.signal);
+      }, controller.signal, finding);
 
       if (!terminalError) chatsApi.list(answeringAgent.key)
         .then((updated) => setChats((current) => mergeChats(current, updated)))
@@ -786,9 +872,17 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
         else newChat();
       }}><span aria-hidden="true">+</span><span>New Question</span></button>
       <nav className={styles.navigation} aria-label="Knowledge agents">
-        <p>WORKSPACE</p>
+        <button
+          type="button"
+          className={styles.workspaceToggle}
+          aria-expanded={!workspaceCollapsed}
+          aria-controls={mobile ? "workspace-links-mobile" : "workspace-links"}
+          onClick={toggleWorkspace}
+        ><span>WORKSPACE</span><Icon name="chevron" /></button>
+        <div id={mobile ? "workspace-links-mobile" : "workspace-links"} className={styles.workspaceLinks} hidden={workspaceCollapsed}>
         <Link href="/home" className={styles.allLibraries} aria-label="All Libraries" aria-current={!profile && !admin && !hasCategoryContext && !showConversation ? "page" : undefined} onClick={() => setDrawerOpen(false)}><Icon name="grid" /><span>All Libraries</span></Link>
-        {user?.role === "admin" && <Link href="/admin/ingest" className={styles.allLibraries} aria-current={admin ? "page" : undefined} onClick={() => setDrawerOpen(false)}><Icon name="shield" /><span>Ingestion admin</span></Link>}
+        {user?.role === "admin" && <Link href="/admin/ingest" className={styles.allLibraries} aria-current={admin && routeKey === "/admin/ingest" ? "page" : undefined} onClick={() => setDrawerOpen(false)}><Icon name="shield" /><span>Ingestion admin</span></Link>}
+        {user?.role === "admin" && <Link href="/admin/overlays" className={styles.allLibraries} aria-current={admin && routeKey === "/admin/overlays" ? "page" : undefined} onClick={() => setDrawerOpen(false)}><Icon name="layers" /><span>Lender overlays</span></Link>}
         {mortgageAgents.length > 0 && <div className={styles.mortgageGroup}>
           <button
             type="button"
@@ -806,6 +900,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
           </button>
         </div>}
         {otherAgents.map((agent) => agentButton(agent))}
+        </div>
       </nav>
       <section className={styles.recentChats} aria-label="Recent conversations" tabIndex={-1}>
         <h2>RECENT</h2>
@@ -850,7 +945,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
 
       <header className={styles.header}>
         <div className={`${styles.headerLead} ${!profile && !admin ? styles.screenReaderOnly : ""}`}>
-          <div className={styles.greeting}>{admin ? <h1>Ingestion admin</h1> : profile ? <h1>My Profile</h1> : <><span>{headerLabel}</span><h1>{headerTitle}</h1></>}</div>
+          <div className={styles.greeting}>{admin ? <h1>{adminTitle}</h1> : profile ? <h1>My Profile</h1> : <><span>{headerLabel}</span><h1>{headerTitle}</h1></>}</div>
         </div>
         {!profile && !admin && <div className={styles.conversationToolbar}>
           {(hasCategoryContext || showConversation) && <div className={styles.scopePicker} ref={scopePicker}>
@@ -911,7 +1006,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
         </div>}
         <div className={styles.mobileBrand}>
           <button ref={menuButton} className={styles.menuButton} aria-label="Open navigation" aria-expanded={drawerOpen} onClick={() => setDrawerOpen(true)}><Icon name="menu" /></button>
-          {admin ? <h1>Ingestion admin</h1> : profile ? <h1>My Profile</h1> : <Link href="/home" className={styles.mobileHeaderCopy}><Image src="/chapter-verse-mark.svg" alt="Chapter and Verse home" width={38} height={40} /><span className={styles.screenReaderOnly}><small>{headerLabel}</small><strong>{headerTitle}</strong></span></Link>}
+          {admin ? <h1>{adminTitle}</h1> : profile ? <h1>My Profile</h1> : <Link href="/home" className={styles.mobileHeaderCopy}><Image src="/chapter-verse-mark.svg" alt="Chapter and Verse home" width={38} height={40} /><span className={styles.screenReaderOnly}><small>{headerLabel}</small><strong>{headerTitle}</strong></span></Link>}
         </div>
         <div className={styles.headerActions} ref={headerActions}>
           <button className={styles.notificationButton} aria-label="Notifications unavailable" aria-expanded={popover === "notifications"} onClick={() => setPopover(popover === "notifications" ? null : "notifications")}><span><Icon name="bell" /></span></button>
@@ -931,7 +1026,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
             {messages.map((message) => <div key={message.id} data-message-id={message.id} className={`${styles.messageRow} ${message.role === "user" ? styles.outgoing : styles.incoming}`}>
               {message.role === "assistant" && <span className={styles.chatAvatar}><Image src="/chapter-verse-mark.svg" alt="Chapter & Verse" width={28} height={28} /><i /></span>}
               <div className={`${styles.messageBubble} ${message.presentation ? styles.structuredBubble : ""} ${message.role === "assistant" && message.streaming && !message.content && !message.presentation ? styles.pendingBubble : ""}`}>
-                {message.role === "user" && <span className={styles.userMessageHeader}>{displayUserName(user)} · {selectedAgentName} · {formatTime(message.createdAt)}</span>}
+                {message.role === "user" && <span className={styles.userMessageHeader}>{displayUserName(user)} · {selectedAgentName} · {formatTime(message.createdAt)}{message.ausFinding && <> · AUS: {AUS_LABELS[message.ausFinding]}</>}</span>}
                 {message.role === "assistant" && !message.presentation && !message.streaming && <span className={styles.answerContext}><i aria-hidden="true" />Answering from {selectedAgentName}</span>}
                 {message.role === "assistant" ? message.presentation
                   ? <AnswerPresentationView
@@ -957,6 +1052,7 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
                 {message.error && <div className={styles.messageError}><span>{message.error}</span>{message.retryQuestion && <button onClick={() => void ask(message.retryQuestion!)} disabled={streaming}>Retry</button>}</div>}
                 {message.role === "assistant" && !(message.streaming && !message.content && !message.presentation) && <div className={styles.messageMeta}>
                   <time>{formatTime(message.createdAt)}</time>
+                  {message.ausFinding && !message.streaming && <span className={styles.ausTag} title="The answer followed this AUS finding">AUS finding: {AUS_LABELS[message.ausFinding]}</span>}
                   {message.role === "assistant" && message.auditId && !message.streaming && <span className={styles.feedback} aria-label="Rate this answer">
                     <button aria-pressed={message.feedback === "up"} onClick={() => void rate(message.id, message.auditId!, "up")}>Helpful</button>
                     <button aria-pressed={message.feedback === "down"} onClick={() => void rate(message.id, message.auditId!, "down")}>Not helpful</button>
@@ -998,6 +1094,13 @@ export function KnowledgeWorkspace({ routeKey, initialAgentSlug = "mortgage", in
           </div>}
           <div className={`${styles.composerArea} ${!hasCategoryContext && !showConversation ? styles.homeComposer : ""}`}>
             {status && <p className={styles.status} role="status">{status}</p>}
+            {showAusPicker && <fieldset className={styles.ausPicker} disabled={streaming || loadingChat}>
+              <legend>AUS finding</legend>
+              {AUS_OPTIONS.map((option) => <label key={option.label} title={option.title}>
+                <input type="radio" name="aus-finding" checked={ausFinding === option.value} onChange={() => setChatAusFinding(activeChatId, option.value)} />
+                <span>{option.label}</span>
+              </label>)}
+            </fieldset>}
             <form className={styles.composer} onSubmit={sendMessage}>
               <input ref={composer} aria-label="Write a message" value={draft} onChange={(event) => setDraft(event.target.value)} placeholder="Hey, quick question…" autoComplete="off" maxLength={4000} disabled={streaming || !selectedAgent?.live || !selectedAgent?.has_documents} />
               {streaming ? <button type="button" className={styles.cancelButton} aria-label="Cancel response" onClick={() => activeStream.current?.abort()}><Icon name="close" /></button> : <button type="submit" aria-label="Send message" disabled={!draft.trim() || !selectedAgent?.live || !selectedAgent?.has_documents}><Icon name="send" /></button>}
