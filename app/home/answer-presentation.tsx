@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import { citationLabel } from "./citation-label";
+import { citationLabel, distinctSources, sourcesBySection } from "./citation-label";
 import { SOURCE_KIND_LABELS, sourceKind } from "./source-kind";
 
 import type {
@@ -125,9 +125,7 @@ type CitationProps = SourceIds & {
 };
 
 function Citations({ source_ids, byIndex, selectedSource, onSelect, inline = false }: CitationProps) {
-  const matched = uniqueSourceIds(source_ids)
-    .map((id) => byIndex.get(id))
-    .filter((source): source is CitationSource => Boolean(source))
+  const matched = distinctSources(uniqueSourceIds(source_ids), byIndex)
     .sort((a, b) => KIND_ORDER[sourceKind(a)] - KIND_ORDER[sourceKind(b)] || a.index - b.index);
 
   if (!matched.length) return null;
@@ -142,7 +140,7 @@ function Citations({ source_ids, byIndex, selectedSource, onSelect, inline = fal
         aria-pressed={selectedSource === source.index}
         title={fullSourceLabel(source)}
         onClick={() => onSelect(source)}
-      >{kind !== "guideline" && <span className="cv-cite__kind">{SOURCE_KIND_LABELS[kind]}</span>}<span className="cv-cite__label">{citationLabel(source)}</span></button>;
+      >{kind !== "guideline" && <><span className="cv-cite__kind">{SOURCE_KIND_LABELS[kind]}</span><span className="cv-cite__sep">{" · "}</span></>}<span className="cv-cite__label">{citationLabel(source)}</span></button>;
     })}
   </Wrapper>;
 }
@@ -222,12 +220,9 @@ export function AnswerPresentationView({
     blocker: "Blocker to check",
     notfound: "Not in your documents",
   }[presentation.verdict.type];
-  const byIndex = useMemo(() => new Map(sources.map((source) => [source.index, source])), [sources]);
+  const byIndex = useMemo(() => sourcesBySection(sources), [sources]);
   const allSourceIds = useMemo(() => collectSourceIds(presentation), [presentation]);
-  const visibleSources = useMemo(() => {
-    const visibleIds = new Set(allSourceIds);
-    return sources.filter((source) => visibleIds.has(source.index));
-  }, [allSourceIds, sources]);
+  const visibleSources = useMemo(() => distinctSources(allSourceIds, byIndex), [allSourceIds, byIndex]);
   const state = onUiStateChange ? uiState : localState;
   const completed = new Set(state.completed_step_ids);
   const checkedDocuments = new Set(state.checked_document_ids);

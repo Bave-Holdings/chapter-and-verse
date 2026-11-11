@@ -6,7 +6,7 @@ import remarkGfm from "remark-gfm";
 
 import type { CitationSource } from "../../lib/api";
 import { MessageLink } from "../_components/message-link";
-import { citationLabel } from "./citation-label";
+import { citationLabel, distinctSources, sourcesBySection } from "./citation-label";
 import { SOURCE_KIND_LABELS, sourceKind } from "./source-kind";
 import styles from "./workspace.module.css";
 
@@ -31,13 +31,16 @@ export function MarkdownMessage({ content, sources, onCitationSelect }: Markdown
   const [highlighted, setHighlighted] = useState<number | null>(null);
   const sourceList = useRef<HTMLDivElement>(null);
   const cited = citedIndexes(content);
-  const citedSources = sources.filter((source) => cited.has(source.index));
+  // [2] and [3] from the same section resolve to one listed source.
+  const byIndex = sourcesBySection(sources.filter((source) => cited.has(source.index)));
+  const citedSources = distinctSources(byIndex.keys(), byIndex);
 
   function citation(index: number) {
-    setHighlighted(index);
-    sourceList.current?.querySelector(`[data-source-index="${index}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    const source = citedSources.find((item) => item.index === index);
-    if (source) onCitationSelect?.(source, citedSources);
+    const source = byIndex.get(index);
+    if (!source) return;
+    setHighlighted(source.index);
+    sourceList.current?.querySelector(`[data-source-index="${source.index}"]`)?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    onCitationSelect?.(source, citedSources);
   }
 
   return (
@@ -50,7 +53,7 @@ export function MarkdownMessage({ content, sources, onCitationSelect }: Markdown
               const match = href?.match(/^#citation-(\d+)$/);
               if (match) {
                 const index = Number(match[1]);
-                const exists = citedSources.some((source) => source.index === index);
+                const exists = byIndex.has(index);
                 return <button type="button" className={styles.citationButton} disabled={!exists} onClick={() => citation(index)} aria-label={`Show source ${index}`}>{children}</button>;
               }
               return <MessageLink href={href}>{children}</MessageLink>;

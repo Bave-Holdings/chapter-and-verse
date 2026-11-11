@@ -334,7 +334,9 @@ describe("AnswerPresentationView", () => {
       expect(chips[0]).not.toHaveClass("cv-cite--labeled");
       chips.slice(1).forEach((chip) => expect(chip).toHaveClass("cv-cite--labeled"));
       expect(chips.map((chip) => chip.textContent)).toEqual([
-        "B3-6-02", "Conventional comparisonB3-3.2-02", "CalculatedBorrower calculations", "Underwriter practiceEmployment gaps", "OverlayMinimum credit score",
+        // A real separator, so copied text never reads "Underwriter practiceEmployment gaps".
+        "B3-6-02", "Conventional comparison · B3-3.2-02", "Calculated · Borrower calculations",
+        "Underwriter practice · Employment gaps", "Overlay · Minimum credit score",
       ]);
       expect(chips[3]).toHaveAttribute("title", "Underwriter practice · Employment gaps · Intellence Underwriter Playbook (FHA)");
       fireEvent.click(chips[3]);
