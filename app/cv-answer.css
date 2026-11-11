@@ -308,7 +308,8 @@
 .cv-cite--labeled { display: inline-block; }
 .cv-cite--labeled::before { display: inline-block; margin: 0 6px 1px 0; vertical-align: middle; }
 .cv-cite__kind { font-weight: 700; }
-.cv-cite__kind::after { content: "\00B7"; margin: 0 5px 0 6px; font-weight: 400; }
+/* A real text separator, not ::after, so copied text reads "Underwriter practice · Letters ...". */
+.cv-cite__sep { margin: 0 2px; font-weight: 400; white-space: pre; }
 .cv-cite--practice    { background: var(--cv-practice-tint); border-color: #C3CBDA; color: var(--cv-practice-ink); }
 .cv-cite--practice::before    { background: var(--cv-practice); }
 .cv-cite--comparison  { background: var(--cv-fixable-tint); border-color: #B9CCF2; color: var(--cv-fixable-ink); }

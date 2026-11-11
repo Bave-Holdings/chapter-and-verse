@@ -140,7 +140,7 @@ function Citations({ source_ids, byIndex, selectedSource, onSelect, inline = fal
         aria-pressed={selectedSource === source.index}
         title={fullSourceLabel(source)}
         onClick={() => onSelect(source)}
-      >{kind !== "guideline" && <span className="cv-cite__kind">{SOURCE_KIND_LABELS[kind]}</span>}<span className="cv-cite__label">{citationLabel(source)}</span></button>;
+      >{kind !== "guideline" && <><span className="cv-cite__kind">{SOURCE_KIND_LABELS[kind]}</span><span className="cv-cite__sep">{" · "}</span></>}<span className="cv-cite__label">{citationLabel(source)}</span></button>;
     })}
   </Wrapper>;
 }
